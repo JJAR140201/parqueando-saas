@@ -84,15 +84,21 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         RegistroParqueo registro = findRegistroActivo(placa, user);
         Tarifa tarifa = findTarifa(user, registro);
         LocalDateTime fechaSalida = LocalDateTime.now();
+        long minutosEstadia = Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes());
         BigDecimal total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+        BigDecimal horas = BigDecimal.valueOf(minutosEstadia)
+            .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
         return PrecioSalidaResponse.builder()
             .placa(registro.getPlaca())
             .tipoVehiculo(registro.getTipoVehiculo())
+            .tipo(registro.getTipoVehiculo() != null ? registro.getTipoVehiculo().name() : null)
             .fechaEntrada(registro.getFechaEntrada())
             .fechaSalida(fechaSalida)
-            .minutosEstadia(Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes()))
+            .minutosEstadia(minutosEstadia)
+            .horas(horas)
             .totalPagado(total)
+            .total(total)
             .sedeId(registro.getSedeId())
             .empresaId(registro.getEmpresaId())
             .build();

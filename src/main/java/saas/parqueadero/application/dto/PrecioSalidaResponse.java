@@ -15,10 +15,13 @@ import saas.parqueadero.domain.model.TipoVehiculo;
 public class PrecioSalidaResponse {
     private String placa;
     private TipoVehiculo tipoVehiculo;
+    private String tipo;
     private LocalDateTime fechaEntrada;
     private LocalDateTime fechaSalida;
     private Long minutosEstadia;
+    private BigDecimal horas;
     private BigDecimal totalPagado;
+    private BigDecimal total;
     private Long sedeId;
     private Long empresaId;
 }
