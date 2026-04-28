@@ -1,4 +1,4 @@
-﻿package saas.parqueadero.domain.port.out;
+package saas.parqueadero.domain.port.out;
 
 import java.time.LocalDateTime;
 import java.util.List;

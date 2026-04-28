@@ -1,4 +1,4 @@
-﻿package saas.parqueadero.infrastructure.adapters.out.persistence.repository;
+package saas.parqueadero.infrastructure.adapters.out.persistence.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
