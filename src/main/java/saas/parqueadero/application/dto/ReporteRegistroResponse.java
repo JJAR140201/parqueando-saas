@@ -25,5 +25,7 @@ public class ReporteRegistroResponse {
     private BigDecimal totalPagado;
     private EstadoRegistroParqueo estado;
     private Long sedeId;
+    private String sedeNombre;
     private Long usuarioId;
+    private String usuarioNombre;
 }

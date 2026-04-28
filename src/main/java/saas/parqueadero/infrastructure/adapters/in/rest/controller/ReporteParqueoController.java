@@ -47,7 +47,7 @@ public class ReporteParqueoController {
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final String[] HEADERS = {
         "ID", "Placa", "Tipo Vehiculo", "Fecha Entrada", "Fecha Salida",
-        "Minutos Estadia", "Total Pagado", "Estado", "Sede ID", "Usuario ID"
+        "Minutos Estadia", "Total Pagado", "Estado", "Sede", "Usuario"
     };
 
     private final ReporteParqueoUseCase reporteParqueoUseCase;
@@ -136,8 +136,8 @@ public class ReporteParqueoController {
                 setCell(row, 5, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-", style);
                 setCell(row, 6, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-", style);
                 setCell(row, 7, r.getEstado() != null ? r.getEstado().name() : "", style);
-                setCell(row, 8, r.getSedeId() != null ? r.getSedeId().toString() : "", style);
-                setCell(row, 9, r.getUsuarioId() != null ? r.getUsuarioId().toString() : "", style);
+                setCell(row, 8, r.getSedeNombre() != null ? r.getSedeNombre() : "-", style);
+                setCell(row, 9, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-", style);
                 rowNum++;
             }
 
@@ -203,8 +203,8 @@ public class ReporteParqueoController {
             addPdfCell(table, dFont, bg, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-");
             addPdfCell(table, dFont, bg, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-");
             addPdfCell(table, dFont, bg, r.getEstado() != null ? r.getEstado().name() : "");
-            addPdfCell(table, dFont, bg, r.getSedeId() != null ? r.getSedeId().toString() : "");
-            addPdfCell(table, dFont, bg, r.getUsuarioId() != null ? r.getUsuarioId().toString() : "");
+            addPdfCell(table, dFont, bg, r.getSedeNombre() != null ? r.getSedeNombre() : "-");
+            addPdfCell(table, dFont, bg, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-");
             alt = !alt;
         }
 
