@@ -8,6 +8,11 @@ import saas.parqueadero.domain.model.EstadoRegistroParqueo;
 import saas.parqueadero.infrastructure.adapters.out.persistence.entity.RegistroParqueoJpaEntity;
 
 public interface RegistroParqueoJpaRepository extends JpaRepository<RegistroParqueoJpaEntity, Long>, JpaSpecificationExecutor<RegistroParqueoJpaEntity> {
+    Optional<RegistroParqueoJpaEntity> findByPlacaAndEstado(
+        String placa,
+        EstadoRegistroParqueo estado
+    );
+
     Optional<RegistroParqueoJpaEntity> findByPlacaAndSedeIdAndEmpresaIdAndEstado(
         String placa,
         Long sedeId,

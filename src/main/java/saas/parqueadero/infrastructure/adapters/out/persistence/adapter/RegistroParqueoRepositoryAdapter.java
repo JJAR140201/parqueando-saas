@@ -28,6 +28,15 @@ public class RegistroParqueoRepositoryAdapter implements RegistroParqueoReposito
     }
 
     @Override
+    public Optional<RegistroParqueo> findActivoByPlaca(String placa) {
+        return registroParqueoJpaRepository.findByPlacaAndEstado(
+                placa.trim().toUpperCase(),
+                EstadoRegistroParqueo.ACTIVO
+            )
+            .map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<RegistroParqueo> findActivoByPlacaAndSedeIdAndEmpresaId(String placa, Long sedeId, Long empresaId) {
         return registroParqueoJpaRepository.findByPlacaAndSedeIdAndEmpresaIdAndEstado(
                 placa.trim().toUpperCase(),

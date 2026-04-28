@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import saas.parqueadero.application.dto.PrecioSalidaResponse;
 import saas.parqueadero.application.dto.RegistrarEntradaRequest;
 import saas.parqueadero.application.dto.RegistrarSalidaRequest;
 import saas.parqueadero.application.dto.RegistroParqueoResponse;
@@ -50,9 +51,9 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         }
 
         registroParqueoRepositoryPort
-            .findActivoByPlacaAndSedeIdAndEmpresaId(request.getPlaca(), user.getSedeId(), user.getEmpresaId())
+            .findActivoByPlaca(request.getPlaca())
             .ifPresent(existing -> {
-                throw new BusinessException("Ya existe un registro activo para esta placa en la sede");
+                throw new BusinessException("Ya existe un registro activo para esta placa. Debe registrar la salida antes de volver a ingresar");
             });
 
         RegistroParqueo registro = RegistroParqueo.builder()
@@ -75,21 +76,40 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     }
 
     @Override
+    public PrecioSalidaResponse consultarPrecioSalida(String placa) {
+        log.info("[RegistroParqueoService] Consultar precio salida placa={}", placa);
+        AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
+        enforceOperarioRole(user);
+
+        RegistroParqueo registro = findRegistroActivo(placa, user);
+        Tarifa tarifa = findTarifa(user, registro);
+        LocalDateTime fechaSalida = LocalDateTime.now();
+        BigDecimal total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+
+        return PrecioSalidaResponse.builder()
+            .placa(registro.getPlaca())
+            .tipoVehiculo(registro.getTipoVehiculo())
+            .fechaEntrada(registro.getFechaEntrada())
+            .fechaSalida(fechaSalida)
+            .minutosEstadia(Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes()))
+            .totalPagado(total)
+            .sedeId(registro.getSedeId())
+            .empresaId(registro.getEmpresaId())
+            .build();
+    }
+
+    @Override
     @Transactional
     public RegistroParqueoResponse registrarSalida(RegistrarSalidaRequest request) {
         log.info("[RegistroParqueoService] Inicia salida placa={}", request.getPlaca());
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
-        RegistroParqueo registro = registroParqueoRepositoryPort
-            .findActivoByPlacaAndSedeIdAndEmpresaId(request.getPlaca(), user.getSedeId(), user.getEmpresaId())
-            .orElseThrow(() -> new ResourceNotFoundException("No existe un registro activo para la placa indicada"));
+        RegistroParqueo registro = findRegistroActivo(request.getPlaca(), user);
 
         Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
             .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
 
-        Tarifa tarifa = tarifaRepositoryPort
-            .findBySedeIdAndEmpresaIdAndTipoVehiculo(user.getSedeId(), user.getEmpresaId(), registro.getTipoVehiculo())
-            .orElseThrow(() -> new ResourceNotFoundException("No existe tarifa configurada para el tipo de vehiculo en la sede"));
+        Tarifa tarifa = findTarifa(user, registro);
 
         LocalDateTime fechaSalida = LocalDateTime.now();
         BigDecimal total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
@@ -105,6 +125,18 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         log.info("[RegistroParqueoService] Salida registrada id={} placa={} totalPagado={}",
             saved.getId(), saved.getPlaca(), saved.getTotalPagado());
         return toResponse(saved);
+    }
+
+    private RegistroParqueo findRegistroActivo(String placa, AuthenticatedUser user) {
+        return registroParqueoRepositoryPort
+            .findActivoByPlacaAndSedeIdAndEmpresaId(placa, user.getSedeId(), user.getEmpresaId())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe un registro activo para la placa indicada"));
+    }
+
+    private Tarifa findTarifa(AuthenticatedUser user, RegistroParqueo registro) {
+        return tarifaRepositoryPort
+            .findBySedeIdAndEmpresaIdAndTipoVehiculo(user.getSedeId(), user.getEmpresaId(), registro.getTipoVehiculo())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe tarifa configurada para el tipo de vehiculo en la sede"));
     }
 
     private BigDecimal calcularTotal(LocalDateTime fechaEntrada, LocalDateTime fechaSalida, Tarifa tarifa) {
