@@ -3,6 +3,7 @@ package saas.parqueadero.application.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import saas.parqueadero.domain.port.in.RegistroParqueoUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
 import saas.parqueadero.domain.port.out.RegistroParqueoRepositoryPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
+import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 import saas.parqueadero.domain.port.out.TarifaRepositoryPort;
 
 @Service
@@ -36,6 +38,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     private final TarifaRepositoryPort tarifaRepositoryPort;
     private final RegistroParqueoRepositoryPort registroParqueoRepositoryPort;
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
+    private final SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
 
     @Override
     @Transactional
@@ -82,10 +85,16 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         enforceOperarioRole(user);
 
         RegistroParqueo registro = findRegistroActivo(placa, user);
-        Tarifa tarifa = findTarifa(user, registro);
         LocalDateTime fechaSalida = LocalDateTime.now();
         long minutosEstadia = Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes());
-        BigDecimal total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+        boolean mensualidadActiva = hasMensualidadVigente(registro, user, fechaSalida);
+        BigDecimal total;
+        if (mensualidadActiva) {
+            total = BigDecimal.ZERO;
+        } else {
+            Tarifa tarifa = findTarifa(user, registro);
+            total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+        }
         BigDecimal horas = BigDecimal.valueOf(minutosEstadia)
             .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
@@ -99,6 +108,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
             .horas(horas)
             .totalPagado(total)
             .total(total)
+            .mensualidadActiva(mensualidadActiva)
             .sedeId(registro.getSedeId())
             .empresaId(registro.getEmpresaId())
             .build();
@@ -115,10 +125,15 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
             .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
 
-        Tarifa tarifa = findTarifa(user, registro);
-
         LocalDateTime fechaSalida = LocalDateTime.now();
-        BigDecimal total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+        boolean mensualidadActiva = hasMensualidadVigente(registro, user, fechaSalida);
+        BigDecimal total;
+        if (mensualidadActiva) {
+            total = BigDecimal.ZERO;
+        } else {
+            Tarifa tarifa = findTarifa(user, registro);
+            total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
+        }
 
         registro.setFechaSalida(fechaSalida);
         registro.setEstado(EstadoRegistroParqueo.FINALIZADO);
@@ -151,6 +166,13 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         BigDecimal fracciones = BigDecimal.valueOf(minutos)
             .divide(BigDecimal.valueOf(minutosFraccion), 0, RoundingMode.CEILING);
         return tarifa.getValorFraccion().multiply(fracciones);
+    }
+
+    private boolean hasMensualidadVigente(RegistroParqueo registro, AuthenticatedUser user, LocalDateTime fechaSalida) {
+        LocalDate fecha = fechaSalida.toLocalDate();
+        return suscripcionMensualRepositoryPort
+            .findVigenteByPlacaAndSedeIdAndEmpresaId(registro.getPlaca(), user.getSedeId(), user.getEmpresaId(), fecha)
+            .isPresent();
     }
 
     private RegistroParqueoResponse toResponse(RegistroParqueo registro) {

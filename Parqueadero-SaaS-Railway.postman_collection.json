@@ -29,6 +29,10 @@
     {
       "key": "placa",
       "value": "ABC123"
+    },
+    {
+      "key": "suscripcionId",
+      "value": "1"
     }
   ],
   "item": [
@@ -189,6 +193,38 @@
           }
         },
         {
+          "name": "Consultar Precio Salida",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/operaciones/parqueadero/salidas/precio?placa={{placa}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "operaciones",
+                "parqueadero",
+                "salidas",
+                "precio"
+              ],
+              "query": [
+                {
+                  "key": "placa",
+                  "value": "{{placa}}"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Registrar Salida",
           "request": {
             "method": "POST",
@@ -216,6 +252,145 @@
                 "v1",
                 "registros",
                 "salida"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mensualidades",
+      "item": [
+        {
+          "name": "Crear Suscripcion Mensual",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"{{placa}}\",\n  \"tipoVehiculo\": \"CARRO\",\n  \"valorMensual\": 250000,\n  \"fechaInicio\": \"2026-04-01\",\n  \"fechaFin\": \"2026-04-30\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": {{sedeId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/mensualidades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mensualidades"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Mensualidades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/mensualidades?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mensualidades"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                },
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeId}}"
+                },
+                {
+                  "key": "placa",
+                  "value": "{{placa}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Mensualidad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoVehiculo\": \"CARRO\",\n  \"valorMensual\": 280000,\n  \"fechaInicio\": \"2026-04-01\",\n  \"fechaFin\": \"2026-05-15\",\n  \"activa\": true,\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": {{sedeId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/mensualidades/{{suscripcionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mensualidades",
+                "{{suscripcionId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancelar Mensualidad",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/mensualidades/{{suscripcionId}}?empresaId={{empresaId}}&sedeId={{sedeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mensualidades",
+                "{{suscripcionId}}"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                },
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeId}}"
+                }
               ]
             }
           }

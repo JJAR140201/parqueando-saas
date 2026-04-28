@@ -1,7 +1,7 @@
 package saas.parqueadero.application.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,17 +12,15 @@ import saas.parqueadero.domain.model.TipoVehiculo;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PrecioSalidaResponse {
+public class SuscripcionMensualResponse {
+    private Long id;
     private String placa;
     private TipoVehiculo tipoVehiculo;
-    private String tipo;
-    private LocalDateTime fechaEntrada;
-    private LocalDateTime fechaSalida;
-    private Long minutosEstadia;
-    private BigDecimal horas;
-    private BigDecimal totalPagado;
-    private BigDecimal total;
-    private Boolean mensualidadActiva;
+    private BigDecimal valorMensual;
+    private LocalDate fechaInicio;
+    private LocalDate fechaFin;
+    private Boolean activa;
+    private Boolean vigenteHoy;
     private Long sedeId;
     private Long empresaId;
 }
