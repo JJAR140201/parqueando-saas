@@ -1,0 +1,609 @@
+{
+  "info": {
+    "_postman_id": "9d5e6f1a-0ff9-4e97-b74e-9d889f4e6e11",
+    "name": "Parqueadero SaaS API - Railway",
+    "description": "Coleccion para probar endpoints desplegados en Railway.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://parqueando-saas-production.up.railway.app"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "empresaId",
+      "value": "1"
+    },
+    {
+      "key": "sedeId",
+      "value": "1"
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    },
+    {
+      "key": "placa",
+      "value": "ABC123"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health y Docs",
+      "item": [
+        {
+          "name": "OpenAPI Docs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/swagger-ui.html",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "swagger-ui.html"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Autenticacion",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (body && body.accessToken) {",
+                  "  pm.collectionVariables.set('token', body.accessToken);",
+                  "}",
+                  "if (body && body.empresaId !== undefined && body.empresaId !== null) {",
+                  "  pm.collectionVariables.set('empresaId', String(body.empresaId));",
+                  "}",
+                  "if (body && body.usuarioId !== undefined && body.usuarioId !== null) {",
+                  "  pm.collectionVariables.set('userId', String(body.usuarioId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operario1\",\n  \"password\": \"123456\",\n  \"rol\": \"OPERARIO\",\n  \"empresaId\": 1,\n  \"sedeId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Registro Parqueo",
+      "item": [
+        {
+          "name": "Registrar Entrada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"{{placa}}\",\n  \"tipoVehiculo\": \"CARRO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/registros/entrada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "registros",
+                "entrada"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar Salida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"placa\": \"{{placa}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/registros/salida",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "registros",
+                "salida"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "item": [
+        {
+          "name": "Listar Empresas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "empresas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Empresa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nit\": \"900123456-7\",\n  \"nombre\": \"Mi Empresa\",\n  \"sedes\": [\n    {\n      \"nombre\": \"Sede Centro\",\n      \"capacidadTotal\": 100\n    },\n    {\n      \"nombre\": \"Sede Norte\",\n      \"capacidadTotal\": 80\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "empresas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar Sedes por Empresa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/empresas/{{empresaId}}/sedes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "empresas",
+                "{{empresaId}}",
+                "sedes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Usuario por Empresa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin_empresa\",\n  \"password\": \"123456\",\n  \"rol\": \"ADMIN\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": {{sedeId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "usuarios"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Empresa",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nit\": \"900123456-7\",\n  \"nombre\": \"Mi Empresa Actualizada\",\n  \"sedes\": [\n    {\n      \"id\": {{sedeId}},\n      \"nombre\": \"Sede Centro\",\n      \"capacidadTotal\": 120,\n      \"capacidadActual\": 10\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/empresas/{{empresaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "empresas",
+                "{{empresaId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Empresa",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/empresas/{{empresaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "empresas",
+                "{{empresaId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Actualizar Usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operario_edit\",\n  \"password\": \"nueva123\",\n  \"rol\": \"OPERARIO\",\n  \"sedeId\": {{sedeId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/usuarios/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "usuarios",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Eliminar Usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/super-admin/usuarios/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "super-admin",
+                "usuarios",
+                "{{userId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Listar Usuarios por Empresa",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/usuarios?empresaId={{empresaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "usuarios"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "Reporte JSON",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reportes/parqueo?empresaId={{empresaId}}&sedeId={{sedeId}}&estado=ACTIVO&desde=2026-04-01&hasta=2026-04-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "parqueo"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                },
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeId}}"
+                },
+                {
+                  "key": "estado",
+                  "value": "ACTIVO"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-04-01"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-04-30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte Excel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reportes/parqueo/excel?empresaId={{empresaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "parqueo",
+                "excel"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporte PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reportes/parqueo/pdf?empresaId={{empresaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "parqueo",
+                "pdf"
+              ],
+              "query": [
+                {
+                  "key": "empresaId",
+                  "value": "{{empresaId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
