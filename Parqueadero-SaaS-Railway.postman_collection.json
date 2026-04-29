@@ -769,6 +769,42 @@
                                                                            ]
                                                               }
                                                   }
+                                  },
+                                  {
+                                      "name":  "Configurar Tarifas (Carro y Moto)",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"valorFraccionCarro\": 3000,\n  \"minutosFraccionCarro\": 60,\n  \"valorFraccionMoto\": 2000,\n  \"minutosFraccionMoto\": 60\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/super-admin/empresas/{{empresaId}}/sedes/{{sedeId}}/tarifas",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "super-admin",
+                                                                               "empresas",
+                                                                               "{{empresaId}}",
+                                                                               "sedes",
+                                                                               "{{sedeId}}",
+                                                                               "tarifas"
+                                                                           ]
+                                                              }
+                                                  }
                                   }
                               ]
                  },
