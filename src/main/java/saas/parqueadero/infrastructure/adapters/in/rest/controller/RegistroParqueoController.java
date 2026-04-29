@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +22,7 @@ import saas.parqueadero.application.dto.PrecioSalidaResponse;
 import saas.parqueadero.application.dto.RegistrarEntradaRequest;
 import saas.parqueadero.application.dto.RegistrarSalidaRequest;
 import saas.parqueadero.application.dto.RegistroParqueoResponse;
+import saas.parqueadero.application.service.TicketParqueoService;
 import saas.parqueadero.domain.port.in.RegistroParqueoUseCase;
 
 @RestController
@@ -30,6 +34,7 @@ import saas.parqueadero.domain.port.in.RegistroParqueoUseCase;
 public class RegistroParqueoController {
 
     private final RegistroParqueoUseCase registroParqueoUseCase;
+    private final TicketParqueoService ticketParqueoService;
 
     @PostMapping("/entrada")
     @Operation(summary = "Registrar entrada de vehiculo", responses = {
@@ -63,5 +68,22 @@ public class RegistroParqueoController {
     public ResponseEntity<RegistroParqueoResponse> registrarSalida(@Valid @RequestBody RegistrarSalidaRequest request) {
         log.info("[RegistroParqueoController] Registrar salida placa={}", request.getPlaca());
         return ResponseEntity.ok(registroParqueoUseCase.registrarSalida(request));
+    }
+
+    @GetMapping(value = "/salidas/ticket", produces = MediaType.APPLICATION_PDF_VALUE)
+    @Operation(summary = "Generar ticket/recibo de parqueo en PDF para imprimir", responses = {
+        @ApiResponse(responseCode = "200", description = "Ticket PDF generado"),
+        @ApiResponse(responseCode = "404", description = "No existe registro activo para la placa")
+    })
+    public ResponseEntity<byte[]> generarTicket(@RequestParam String placa) {
+        log.info("[RegistroParqueoController] Generar ticket placa={}", placa);
+        PrecioSalidaResponse precio = registroParqueoUseCase.consultarPrecioSalida(placa);
+        byte[] pdf = ticketParqueoService.generarTicket(precio);
+        String filename = "ticket-" + placa.toUpperCase() + ".pdf";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
+        headers.setContentLength(pdf.length);
+        return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
 }
