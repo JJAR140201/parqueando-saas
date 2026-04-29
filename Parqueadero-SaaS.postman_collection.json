@@ -595,6 +595,41 @@
                                                                      }
                                                                  ]
                                                   }
+                                  },
+                                  {
+                                      "name":  "Generar Ticket PDF",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/pdf"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/registros/salidas/ticket?placa={{placa}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "registros",
+                                                                               "salidas",
+                                                                               "ticket"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "placa",
+                                                                                    "value":  "{{placa}}"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
                                   }
                               ]
                  },
@@ -636,7 +671,7 @@
                                       "name":  "Listar Mensualidades - SUPER_ADMIN (Sin Filtros)",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "description":  "SUPER_ADMIN sin par\u00e1metros: retorna TODAS las mensualidades de TODAS las empresas. Para ADMIN/OPERARIO: solo ve las de su empresa/sede.",
+                                                      "description":  "SUPER_ADMIN sin parámetros: retorna TODAS las mensualidades de TODAS las empresas. Para ADMIN/OPERARIO: solo ve las de su empresa/sede.",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Authorization",
@@ -660,7 +695,7 @@
                                       "name":  "Listar Mensualidades - Filtrado",
                                       "request":  {
                                                       "method":  "GET",
-                                                      "description":  "Con par\u00e1metros: SUPER_ADMIN obtiene de empresa/sede especificada. ADMIN/OPERARIO filtra tambi\u00e9n por su scope. Par\u00e1metro placa es opcional en todos los casos.",
+                                                      "description":  "Con parámetros: SUPER_ADMIN obtiene de empresa/sede especificada. ADMIN/OPERARIO filtra también por su scope. Parámetro placa es opcional en todos los casos.",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Authorization",
@@ -668,7 +703,7 @@
                                                                      }
                                                                  ],
                                                       "url":  {
-                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades?empresaId={{empresaId}}\u0026sedeId={{sedeId}}\u0026placa={{placa}}",
                                                                   "host":  [
                                                                                "{{baseUrl}}"
                                                                            ],
@@ -737,7 +772,7 @@
                                                                      }
                                                                  ],
                                                       "url":  {
-                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/{{suscripcionId}}?empresaId={{empresaId}}&sedeId={{sedeId}}",
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/{{suscripcionId}}?empresaId={{empresaId}}\u0026sedeId={{sedeId}}",
                                                                   "host":  [
                                                                                "{{baseUrl}}"
                                                                            ],
@@ -772,7 +807,7 @@
                                                                      }
                                                                  ],
                                                       "url":  {
-                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/excel?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/excel?empresaId={{empresaId}}\u0026sedeId={{sedeId}}\u0026placa={{placa}}",
                                                                   "host":  [
                                                                                "{{baseUrl}}"
                                                                            ],
@@ -812,7 +847,7 @@
                                                                      }
                                                                  ],
                                                       "url":  {
-                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/pdf?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/pdf?empresaId={{empresaId}}\u0026sedeId={{sedeId}}\u0026placa={{placa}}",
                                                                   "host":  [
                                                                                "{{baseUrl}}"
                                                                            ],
