@@ -14,7 +14,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
@@ -26,20 +29,30 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+import saas.parqueadero.domain.model.AuthenticatedUser;
+import saas.parqueadero.domain.model.Sede;
 import saas.parqueadero.domain.model.SuscripcionMensual;
+import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
+import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 
 @Service
+@RequiredArgsConstructor
 public class ExportSuscripcionesService {
+
+    private final SedeRepositoryPort sedeRepositoryPort;
+    private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] HEADERS = {
         "ID", "Placa", "Tipo Vehiculo", "Valor Mensual", "Fecha Inicio",
-        "Fecha Fin", "Activa", "Empresa", "Sede"
+        "Fecha Fin", "Activa", "Sede", "Usuario"
     };
 
     public byte[] exportToExcel(List<SuscripcionMensual> suscripciones) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Mensualidades");
+            Map<String, String> sedeCache = new HashMap<>();
+            String usuarioNombre = resolveUsuarioNombre();
 
             CellStyle headerStyle = workbook.createCellStyle();
             headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
@@ -74,8 +87,8 @@ public class ExportSuscripcionesService {
                 setCell(row, 4, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
                 setCell(row, 5, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
                 setCell(row, 6, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No", style);
-                setCell(row, 7, suscripcion.getEmpresaId() != null ? suscripcion.getEmpresaId().toString() : "", style);
-                setCell(row, 8, suscripcion.getSedeId() != null ? suscripcion.getSedeId().toString() : "", style);
+                setCell(row, 7, resolveSedeNombre(suscripcion, sedeCache), style);
+                setCell(row, 8, usuarioNombre, style);
                 rowNum++;
             }
 
@@ -103,6 +116,8 @@ public class ExportSuscripcionesService {
         Document document = new Document(PageSize.A4.rotate());
         PdfWriter.getInstance(document, out);
         document.open();
+        Map<String, String> sedeCache = new HashMap<>();
+        String usuarioNombre = resolveUsuarioNombre();
 
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.DARK_GRAY);
         document.add(new Paragraph("Reporte de Mensualidades", titleFont));
@@ -132,8 +147,8 @@ public class ExportSuscripcionesService {
             addPdfCell(table, dataFont, bg, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No");
-            addPdfCell(table, dataFont, bg, suscripcion.getEmpresaId() != null ? suscripcion.getEmpresaId().toString() : "");
-            addPdfCell(table, dataFont, bg, suscripcion.getSedeId() != null ? suscripcion.getSedeId().toString() : "");
+            addPdfCell(table, dataFont, bg, resolveSedeNombre(suscripcion, sedeCache));
+            addPdfCell(table, dataFont, bg, usuarioNombre);
             alt = !alt;
         }
 
@@ -165,5 +180,24 @@ public class ExportSuscripcionesService {
         cell.setBackgroundColor(bg);
         cell.setPadding(3);
         table.addCell(cell);
+    }
+
+    private String resolveSedeNombre(SuscripcionMensual suscripcion, Map<String, String> sedeCache) {
+        if (suscripcion.getEmpresaId() == null || suscripcion.getSedeId() == null) {
+            return "-";
+        }
+        String key = suscripcion.getEmpresaId() + ":" + suscripcion.getSedeId();
+        return sedeCache.computeIfAbsent(key, k -> sedeRepositoryPort
+            .findByIdAndEmpresaId(suscripcion.getSedeId(), suscripcion.getEmpresaId())
+            .map(Sede::getNombre)
+            .orElse("-"));
+    }
+
+    private String resolveUsuarioNombre() {
+        AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        if (currentUser == null || currentUser.getUsername() == null || currentUser.getUsername().isBlank()) {
+            return "-";
+        }
+        return currentUser.getUsername();
     }
 }
