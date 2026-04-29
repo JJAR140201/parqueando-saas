@@ -163,9 +163,11 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     private BigDecimal calcularTotal(LocalDateTime fechaEntrada, LocalDateTime fechaSalida, Tarifa tarifa) {
         long minutos = Math.max(1, Duration.between(fechaEntrada, fechaSalida).toMinutes());
         int minutosFraccion = Math.max(1, tarifa.getMinutosFraccion());
-        BigDecimal fracciones = BigDecimal.valueOf(minutos)
-            .divide(BigDecimal.valueOf(minutosFraccion), 0, RoundingMode.CEILING);
-        return tarifa.getValorFraccion().multiply(fracciones);
+        BigDecimal valorPorMinuto = tarifa.getValorFraccion()
+            .divide(BigDecimal.valueOf(minutosFraccion), 6, RoundingMode.HALF_UP);
+        return valorPorMinuto
+            .multiply(BigDecimal.valueOf(minutos))
+            .setScale(0, RoundingMode.HALF_UP);
     }
 
     private boolean hasMensualidadVigente(RegistroParqueo registro, AuthenticatedUser user, LocalDateTime fechaSalida) {
