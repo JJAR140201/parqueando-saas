@@ -50,6 +50,7 @@ public class AuthService implements AuthUseCase {
             .accessToken(token)
             .tokenType("Bearer")
             .usuarioId(usuario.getId())
+            .nombre(usuario.getNombre())
             .empresaId(usuario.getEmpresaId())
             .sedeId(usuario.getSedeId())
             .username(usuario.getUsername())
@@ -78,6 +79,9 @@ public class AuthService implements AuthUseCase {
         }
 
         String normalizedUsername = request.getUsername().trim();
+        String normalizedNombre = request.getNombre() == null || request.getNombre().isBlank()
+            ? normalizedUsername
+            : request.getNombre().trim();
 
         if (request.getRol() == RolUsuario.SUPER_ADMIN) {
             if (creatorRole != RolUsuario.SUPER_ADMIN) {
@@ -93,6 +97,7 @@ public class AuthService implements AuthUseCase {
                 });
 
             Usuario createdSuperAdmin = usuarioRepositoryPort.save(Usuario.builder()
+                .nombre(normalizedNombre)
                 .username(normalizedUsername)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .rol(RolUsuario.SUPER_ADMIN)
@@ -103,6 +108,7 @@ public class AuthService implements AuthUseCase {
 
             return RegisterUserResponse.builder()
                 .usuarioId(createdSuperAdmin.getId())
+                .nombre(createdSuperAdmin.getNombre())
                 .username(createdSuperAdmin.getUsername())
                 .rol(createdSuperAdmin.getRol().name())
                 .empresaId(createdSuperAdmin.getEmpresaId())
@@ -124,6 +130,7 @@ public class AuthService implements AuthUseCase {
             });
 
         Usuario toCreate = Usuario.builder()
+            .nombre(normalizedNombre)
             .username(normalizedUsername)
             .password(passwordEncoder.encode(request.getPassword()))
             .rol(request.getRol())
@@ -137,6 +144,7 @@ public class AuthService implements AuthUseCase {
 
         return RegisterUserResponse.builder()
             .usuarioId(created.getId())
+            .nombre(created.getNombre())
             .username(created.getUsername())
             .rol(created.getRol().name())
             .empresaId(created.getEmpresaId())

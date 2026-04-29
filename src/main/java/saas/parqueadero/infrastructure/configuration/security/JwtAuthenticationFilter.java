@@ -29,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtTokenProvider.isValid(token)) {
                 String username = jwtTokenProvider.getUsername(token);
+                String nombre = jwtTokenProvider.getNombre(token);
                 Long usuarioId = jwtTokenProvider.getUsuarioId(token);
                 Long empresaId = jwtTokenProvider.getEmpresaId(token);
                 Long sedeId = jwtTokenProvider.getSedeId(token);
@@ -38,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .collect(Collectors.toList());
 
                 AuthenticatedUser authenticatedUser = AuthenticatedUser.builder()
+                    .nombre(nombre)
                     .username(username)
                     .usuarioId(usuarioId)
                     .empresaId(empresaId)

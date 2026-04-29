@@ -32,6 +32,9 @@ public class UsuarioJpaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 120)
+    private String nombre;
+
     @Column(nullable = false, length = 80)
     private String username;
 

@@ -13,6 +13,8 @@ import saas.parqueadero.domain.model.RolUsuario;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreateEmpresaUserRequest {
+    private String nombre;
+
     @NotBlank
     private String username;
 

@@ -36,6 +36,11 @@ public class JwtTokenProvider {
         return getLongClaim(token, "sedeId");
     }
 
+    public String getNombre(String token) {
+        Object value = extractClaims(token).get("nombre");
+        return value != null ? value.toString() : null;
+    }
+
     @SuppressWarnings("unchecked")
     public List<String> getRoles(String token) {
         Object roles = extractClaims(token).get("roles");
@@ -55,6 +60,7 @@ public class JwtTokenProvider {
         Date now = new Date();
         Map<String, Object> claims = new HashMap<>();
         claims.put("usuarioId", usuario.getId());
+        claims.put("nombre", usuario.getNombre());
         claims.put("roles", List.of(usuario.getRol().name()));
         if (usuario.getEmpresaId() != null) {
             claims.put("empresaId", usuario.getEmpresaId());

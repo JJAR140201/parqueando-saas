@@ -83,6 +83,7 @@ public class SuperAdminService implements SuperAdminUseCase {
         return usuarioRepositoryPort.findByEmpresaId(empresaId).stream()
             .map(usuario -> UserSummaryResponse.builder()
                 .usuarioId(usuario.getId())
+                .nombre(usuario.getNombre())
                 .username(usuario.getUsername())
                 .rol(usuario.getRol().name())
                 .empresaId(usuario.getEmpresaId())
@@ -180,12 +181,16 @@ public class SuperAdminService implements SuperAdminUseCase {
             .orElseThrow(() -> new ResourceNotFoundException("La sede no existe para la empresa indicada"));
 
         String normalizedUsername = request.getUsername().trim();
+        String normalizedNombre = request.getNombre() == null || request.getNombre().isBlank()
+            ? normalizedUsername
+            : request.getNombre().trim();
         usuarioRepositoryPort.findByUsernameAndEmpresaId(normalizedUsername, request.getEmpresaId())
             .ifPresent(user -> {
                 throw new BusinessException("Ya existe un usuario con ese username en la empresa");
             });
 
         Usuario created = usuarioRepositoryPort.save(Usuario.builder()
+            .nombre(normalizedNombre)
             .username(normalizedUsername)
             .password(passwordEncoder.encode(request.getPassword()))
             .rol(request.getRol())
@@ -195,6 +200,7 @@ public class SuperAdminService implements SuperAdminUseCase {
 
         return RegisterUserResponse.builder()
             .usuarioId(created.getId())
+            .nombre(created.getNombre())
             .username(created.getUsername())
             .rol(created.getRol().name())
             .empresaId(created.getEmpresaId())
@@ -331,6 +337,9 @@ public class SuperAdminService implements SuperAdminUseCase {
         String username = request.getUsername() != null && !request.getUsername().isBlank()
             ? request.getUsername().trim()
             : existingUser.getUsername();
+        String nombre = request.getNombre() != null && !request.getNombre().isBlank()
+            ? request.getNombre().trim()
+            : (existingUser.getNombre() == null || existingUser.getNombre().isBlank() ? username : existingUser.getNombre());
 
         usuarioRepositoryPort.findByUsernameAndEmpresaId(username, existingUser.getEmpresaId())
             .filter(user -> !user.getId().equals(existingUser.getId()))
@@ -344,6 +353,7 @@ public class SuperAdminService implements SuperAdminUseCase {
 
         Usuario saved = usuarioRepositoryPort.save(Usuario.builder()
             .id(existingUser.getId())
+            .nombre(nombre)
             .username(username)
             .password(encodedPassword)
             .rol(request.getRol())
@@ -353,6 +363,7 @@ public class SuperAdminService implements SuperAdminUseCase {
 
         return RegisterUserResponse.builder()
             .usuarioId(saved.getId())
+            .nombre(saved.getNombre())
             .username(saved.getUsername())
             .rol(saved.getRol().name())
             .empresaId(saved.getEmpresaId())

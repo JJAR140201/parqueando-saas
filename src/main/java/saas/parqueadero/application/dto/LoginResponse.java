@@ -13,6 +13,7 @@ public class LoginResponse {
     private String accessToken;
     private String tokenType;
     private Long usuarioId;
+    private String nombre;
     private Long empresaId;
     private Long sedeId;
     private String username;

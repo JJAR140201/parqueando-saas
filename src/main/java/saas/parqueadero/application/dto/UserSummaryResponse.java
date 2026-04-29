@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserSummaryResponse {
     private Long usuarioId;
+    private String nombre;
     private String username;
     private String rol;
     private Long empresaId;

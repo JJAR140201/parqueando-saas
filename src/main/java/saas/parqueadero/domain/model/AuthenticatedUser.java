@@ -14,6 +14,7 @@ public class AuthenticatedUser {
     private Long usuarioId;
     private Long empresaId;
     private Long sedeId;
+    private String nombre;
     private String username;
     private List<String> roles;
 }

@@ -195,9 +195,15 @@ public class ExportSuscripcionesService {
 
     private String resolveUsuarioNombre() {
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
-        if (currentUser == null || currentUser.getUsername() == null || currentUser.getUsername().isBlank()) {
+        if (currentUser == null) {
             return "-";
         }
-        return currentUser.getUsername();
+        if (currentUser.getNombre() != null && !currentUser.getNombre().isBlank()) {
+            return currentUser.getNombre();
+        }
+        if (currentUser.getUsername() != null && !currentUser.getUsername().isBlank()) {
+            return currentUser.getUsername();
+        }
+        return "-";
     }
 }

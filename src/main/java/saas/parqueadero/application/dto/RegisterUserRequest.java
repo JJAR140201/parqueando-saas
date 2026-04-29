@@ -12,6 +12,8 @@ import saas.parqueadero.domain.model.RolUsuario;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegisterUserRequest {
+    private String nombre;
+
     @NotBlank
     private String username;
 

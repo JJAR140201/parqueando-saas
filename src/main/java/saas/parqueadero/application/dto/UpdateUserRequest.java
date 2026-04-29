@@ -12,6 +12,8 @@ import saas.parqueadero.domain.model.RolUsuario;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateUserRequest {
+    private String nombre;
+
     private String username;
 
     private String password;
