@@ -633,9 +633,34 @@
                                                   }
                                   },
                                   {
-                                      "name":  "Listar Mensualidades",
+                                      "name":  "Listar Mensualidades - SUPER_ADMIN (Sin Filtros)",
                                       "request":  {
                                                       "method":  "GET",
+                                                      "description":  "SUPER_ADMIN sin par\u00e1metros: retorna TODAS las mensualidades de TODAS las empresas. Para ADMIN/OPERARIO: solo ve las de su empresa/sede.",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "mensualidades"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar Mensualidades - Filtrado",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "description":  "Con par\u00e1metros: SUPER_ADMIN obtiene de empresa/sede especificada. ADMIN/OPERARIO filtra tambi\u00e9n por su scope. Par\u00e1metro placa es opcional en todos los casos.",
                                                       "header":  [
                                                                      {
                                                                          "key":  "Authorization",
