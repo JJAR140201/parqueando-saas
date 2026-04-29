@@ -23,6 +23,8 @@ import saas.parqueadero.application.dto.CreateEmpresaResponse;
 import saas.parqueadero.application.dto.CreateEmpresaUserRequest;
 import saas.parqueadero.application.dto.RegisterUserResponse;
 import saas.parqueadero.application.dto.SedeSummaryResponse;
+import saas.parqueadero.application.dto.UpsertTarifasRequest;
+import saas.parqueadero.application.dto.UpsertTarifasResponse;
 import saas.parqueadero.application.dto.UpdateEmpresaRequest;
 import saas.parqueadero.application.dto.UpdateUserRequest;
 import saas.parqueadero.domain.port.in.SuperAdminUseCase;
@@ -94,6 +96,21 @@ public class SuperAdminController {
     ) {
         log.info("[SuperAdminController] Actualizar empresa empresaId={} nit={} sedes={}", empresaId, request.getNit(), request.getSedes().size());
         return ResponseEntity.ok(superAdminUseCase.updateEmpresaWithSedes(empresaId, request));
+    }
+
+    @PutMapping("/empresas/{empresaId}/sedes/{sedeId}/tarifas")
+    @Operation(summary = "Crear o actualizar tarifas de carro y moto por sede", responses = {
+        @ApiResponse(responseCode = "200", description = "Tarifas actualizadas"),
+        @ApiResponse(responseCode = "400", description = "Regla de negocio o validacion"),
+        @ApiResponse(responseCode = "404", description = "Empresa o sede no encontrada")
+    })
+    public ResponseEntity<UpsertTarifasResponse> upsertTarifas(
+        @PathVariable Long empresaId,
+        @PathVariable Long sedeId,
+        @Valid @RequestBody UpsertTarifasRequest request
+    ) {
+        log.info("[SuperAdminController] Upsert tarifas empresaId={} sedeId={}", empresaId, sedeId);
+        return ResponseEntity.ok(superAdminUseCase.upsertTarifas(empresaId, sedeId, request));
     }
 
     @DeleteMapping("/empresas/{empresaId}")

@@ -1,6 +1,7 @@
 package saas.parqueadero.application.service;
 
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,8 @@ import saas.parqueadero.application.dto.CreateEmpresaResponse;
 import saas.parqueadero.application.dto.CreateEmpresaUserRequest;
 import saas.parqueadero.application.dto.RegisterUserResponse;
 import saas.parqueadero.application.dto.SedeSummaryResponse;
+import saas.parqueadero.application.dto.UpsertTarifasRequest;
+import saas.parqueadero.application.dto.UpsertTarifasResponse;
 import saas.parqueadero.application.dto.UserSummaryResponse;
 import saas.parqueadero.application.dto.UpdateEmpresaRequest;
 import saas.parqueadero.application.dto.UpdateEmpresaSedeRequest;
@@ -27,6 +30,8 @@ import saas.parqueadero.domain.model.AuthenticatedUser;
 import saas.parqueadero.domain.model.Empresa;
 import saas.parqueadero.domain.model.RolUsuario;
 import saas.parqueadero.domain.model.Sede;
+import saas.parqueadero.domain.model.Tarifa;
+import saas.parqueadero.domain.model.TipoVehiculo;
 import saas.parqueadero.domain.model.Usuario;
 import saas.parqueadero.domain.port.in.SuperAdminUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
@@ -305,6 +310,45 @@ public class SuperAdminService implements SuperAdminUseCase {
 
     @Override
     @Transactional
+    public UpsertTarifasResponse upsertTarifas(Long empresaId, Long sedeId, UpsertTarifasRequest request) {
+        log.info("[SuperAdminService] Upsert tarifas empresaId={} sedeId={}", empresaId, sedeId);
+        AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        enforceSuperAdmin(currentUser);
+
+        empresaRepositoryPort.findById(empresaId)
+            .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+
+        sedeRepositoryPort.findByIdAndEmpresaId(sedeId, empresaId)
+            .orElseThrow(() -> new ResourceNotFoundException("La sede no existe para la empresa indicada"));
+
+        Tarifa tarifaCarro = upsertTarifaPorTipo(
+            empresaId,
+            sedeId,
+            TipoVehiculo.CARRO,
+            request.getValorFraccionCarro(),
+            request.getMinutosFraccionCarro()
+        );
+
+        Tarifa tarifaMoto = upsertTarifaPorTipo(
+            empresaId,
+            sedeId,
+            TipoVehiculo.MOTO,
+            request.getValorFraccionMoto(),
+            request.getMinutosFraccionMoto()
+        );
+
+        return UpsertTarifasResponse.builder()
+            .empresaId(empresaId)
+            .sedeId(sedeId)
+            .valorFraccionCarro(tarifaCarro.getValorFraccion())
+            .minutosFraccionCarro(tarifaCarro.getMinutosFraccion())
+            .valorFraccionMoto(tarifaMoto.getValorFraccion())
+            .minutosFraccionMoto(tarifaMoto.getMinutosFraccion())
+            .build();
+    }
+
+    @Override
+    @Transactional
     public void deleteEmpresa(Long empresaId) {
         log.warn("[SuperAdminService] Eliminar empresa empresaId={}", empresaId);
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
@@ -398,5 +442,28 @@ public class SuperAdminService implements SuperAdminUseCase {
         }
 
         return Math.min(capacidad, capacidadTotal);
+    }
+
+    private Tarifa upsertTarifaPorTipo(
+        Long empresaId,
+        Long sedeId,
+        TipoVehiculo tipoVehiculo,
+        BigDecimal valorFraccion,
+        Integer minutosFraccion
+    ) {
+        Tarifa existing = tarifaRepositoryPort
+            .findBySedeIdAndEmpresaIdAndTipoVehiculo(sedeId, empresaId, tipoVehiculo)
+            .orElse(null);
+
+        Tarifa tarifa = Tarifa.builder()
+            .id(existing != null ? existing.getId() : null)
+            .tipoVehiculo(tipoVehiculo)
+            .valorFraccion(valorFraccion)
+            .minutosFraccion(minutosFraccion)
+            .sedeId(sedeId)
+            .empresaId(empresaId)
+            .build();
+
+        return tarifaRepositoryPort.save(tarifa);
     }
 }
