@@ -107,7 +107,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"username\": \"super.admin.2\",\n  \"password\": \"SuperAdmin123*\",\n  \"rol\": \"SUPER_ADMIN\"\n}"
+                                                                   "raw":  "{\n  \"nombre\": \"Super Admin Dos\",\n  \"username\": \"super.admin.2\",\n  \"password\": \"SuperAdmin123*\",\n  \"rol\": \"SUPER_ADMIN\"\n}"
                                                                },
                                                       "url":  {
                                                                   "raw":  "{{baseUrl}}/api/v1/auth/register",
@@ -226,7 +226,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"username\": \"admin.empresa1\",\n  \"password\": \"Admin123*\",\n  \"rol\": \"ADMIN\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": 1\n}"
+                                                                   "raw":  "{\n  \"nombre\": \"Admin Empresa Uno\",\n  \"username\": \"admin.empresa1\",\n  \"password\": \"Admin123*\",\n  \"rol\": \"ADMIN\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": 1\n}"
                                                                },
                                                       "url":  {
                                                                   "raw":  "{{baseUrl}}/api/v1/super-admin/usuarios",
@@ -316,7 +316,7 @@
                                                                  ],
                                                       "body":  {
                                                                    "mode":  "raw",
-                                                                   "raw":  "{\n  \"username\": \"operario.actualizado\",\n  \"password\": \"NuevaClave123*\",\n  \"rol\": \"OPERARIO\",\n  \"sedeId\": 1\n}"
+                                                                   "raw":  "{\n  \"nombre\": \"Operario Actualizado\",\n  \"username\": \"operario.actualizado\",\n  \"password\": \"NuevaClave123*\",\n  \"rol\": \"OPERARIO\",\n  \"sedeId\": 1\n}"
                                                                },
                                                       "url":  {
                                                                   "raw":  "{{baseUrl}}/api/v1/super-admin/usuarios/{{userId}}",
