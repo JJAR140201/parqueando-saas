@@ -71,4 +71,12 @@ public class SuscripcionMensualRepositoryAdapter implements SuscripcionMensualRe
             fechaInicio
         );
     }
+
+    @Override
+    public List<SuscripcionMensual> findAll() {
+        return suscripcionMensualJpaRepository.findAll()
+            .stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
+    }
 }

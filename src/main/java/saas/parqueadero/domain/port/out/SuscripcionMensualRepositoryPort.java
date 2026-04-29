@@ -17,4 +17,6 @@ public interface SuscripcionMensualRepositoryPort {
     boolean existsActivaOverlap(String placa, Long sedeId, Long empresaId, LocalDate fechaInicio, LocalDate fechaFin);
 
     boolean existsActivaOverlapExcludingId(Long id, String placa, Long sedeId, Long empresaId, LocalDate fechaInicio, LocalDate fechaFin);
+
+    List<SuscripcionMensual> findAll();
 }

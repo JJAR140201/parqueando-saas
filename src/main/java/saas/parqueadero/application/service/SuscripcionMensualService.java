@@ -107,8 +107,19 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
     @Override
     public List<SuscripcionMensualResponse> listSuscripciones(Long empresaId, Long sedeId, String placa) {
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        
+        // Si es SUPER_ADMIN sin filtros, devuelve todas las suscripciones de todas las empresas
+        if (hasRole(currentUser, RolUsuario.SUPER_ADMIN) && empresaId == null && sedeId == null) {
+            String placaFiltro = placa == null ? null : placa.trim().toUpperCase();
+            return suscripcionMensualRepositoryPort.findAll()
+                .stream()
+                .filter(s -> placaFiltro == null || s.getPlaca().contains(placaFiltro))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        }
+        
+        // Para ADMIN/OPERARIO o SUPER_ADMIN con filtros, usa el scope normal
         Scope scope = resolveScope(currentUser, empresaId, sedeId);
-
         String placaFiltro = placa == null ? null : placa.trim().toUpperCase();
         return suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId())
             .stream()

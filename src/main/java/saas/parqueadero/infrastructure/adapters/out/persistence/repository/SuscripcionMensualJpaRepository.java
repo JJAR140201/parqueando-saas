@@ -33,4 +33,6 @@ public interface SuscripcionMensualJpaRepository extends JpaRepository<Suscripci
         LocalDate fechaFin,
         LocalDate fechaInicio
     );
+
+    List<SuscripcionMensualJpaEntity> findAll();
 }
