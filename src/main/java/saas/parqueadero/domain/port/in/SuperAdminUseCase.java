@@ -5,6 +5,8 @@ import saas.parqueadero.application.dto.CreateEmpresaRequest;
 import saas.parqueadero.application.dto.CreateEmpresaResponse;
 import saas.parqueadero.application.dto.CreateEmpresaUserRequest;
 import saas.parqueadero.application.dto.SedeSummaryResponse;
+import saas.parqueadero.application.dto.UpsertTarifasRequest;
+import saas.parqueadero.application.dto.UpsertTarifasResponse;
 import saas.parqueadero.application.dto.UserSummaryResponse;
 import saas.parqueadero.application.dto.UpdateEmpresaRequest;
 import saas.parqueadero.application.dto.UpdateUserRequest;
@@ -22,6 +24,8 @@ public interface SuperAdminUseCase {
     RegisterUserResponse createUserForEmpresa(CreateEmpresaUserRequest request);
 
     CreateEmpresaResponse updateEmpresaWithSedes(Long empresaId, UpdateEmpresaRequest request);
+
+    UpsertTarifasResponse upsertTarifas(Long empresaId, Long sedeId, UpsertTarifasRequest request);
 
     void deleteEmpresa(Long empresaId);
 
