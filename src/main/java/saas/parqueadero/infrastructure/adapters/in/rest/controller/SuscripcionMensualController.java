@@ -8,7 +8,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 import saas.parqueadero.application.dto.CreateSuscripcionMensualRequest;
 import saas.parqueadero.application.dto.SuscripcionMensualResponse;
 import saas.parqueadero.application.dto.UpdateSuscripcionMensualRequest;
+import saas.parqueadero.application.service.ExportSuscripcionesService;
+import saas.parqueadero.domain.model.SuscripcionMensual;
 import saas.parqueadero.domain.port.in.SuscripcionMensualUseCase;
 
 @RestController
@@ -33,6 +37,7 @@ import saas.parqueadero.domain.port.in.SuscripcionMensualUseCase;
 public class SuscripcionMensualController {
 
     private final SuscripcionMensualUseCase suscripcionMensualUseCase;
+    private final ExportSuscripcionesService exportSuscripcionesService;
 
     @PostMapping
     @Operation(summary = "Crear suscripcion mensual", responses = {
@@ -82,5 +87,75 @@ public class SuscripcionMensualController {
         log.warn("[SuscripcionMensualController] Cancelar suscripcion id={} empresaId={} sedeId={}", id, empresaId, sedeId);
         suscripcionMensualUseCase.cancelSuscripcion(id, empresaId, sedeId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export/excel")
+    @Operation(summary = "Exportar suscripciones a Excel", responses = {
+        @ApiResponse(responseCode = "200", description = "Archivo Excel generado")
+    })
+    public ResponseEntity<byte[]> exportToExcel(
+        @RequestParam(required = false) Long empresaId,
+        @RequestParam(required = false) Long sedeId,
+        @RequestParam(required = false) String placa
+    ) {
+        log.info("[SuscripcionMensualController] Exportar a Excel empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
+        try {
+            List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
+            List<SuscripcionMensual> suscripcionesModelo = suscripciones.stream()
+                .map(this::toModel)
+                .toList();
+            
+            byte[] excelFile = exportSuscripcionesService.exportToExcel(suscripcionesModelo);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mensualidades.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelFile);
+        } catch (Exception e) {
+            log.error("[SuscripcionMensualController] Error al exportar a Excel", e);
+            throw new RuntimeException("Error al exportar a Excel", e);
+        }
+    }
+
+    @GetMapping("/export/pdf")
+    @Operation(summary = "Exportar suscripciones a PDF", responses = {
+        @ApiResponse(responseCode = "200", description = "Archivo PDF generado")
+    })
+    public ResponseEntity<byte[]> exportToPdf(
+        @RequestParam(required = false) Long empresaId,
+        @RequestParam(required = false) Long sedeId,
+        @RequestParam(required = false) String placa
+    ) {
+        log.info("[SuscripcionMensualController] Exportar a PDF empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
+        try {
+            List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
+            List<SuscripcionMensual> suscripcionesModelo = suscripciones.stream()
+                .map(this::toModel)
+                .toList();
+            
+            byte[] pdfFile = exportSuscripcionesService.exportToPdf(suscripcionesModelo);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mensualidades.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfFile);
+        } catch (Exception e) {
+            log.error("[SuscripcionMensualController] Error al exportar a PDF", e);
+            throw new RuntimeException("Error al exportar a PDF", e);
+        }
+    }
+
+    private SuscripcionMensual toModel(SuscripcionMensualResponse response) {
+        return SuscripcionMensual.builder()
+            .id(response.getId())
+            .placa(response.getPlaca())
+            .tipoVehiculo(response.getTipoVehiculo())
+            .valorMensual(response.getValorMensual())
+            .fechaInicio(response.getFechaInicio())
+            .fechaFin(response.getFechaFin())
+            .activa(response.getActiva())
+            .sedeId(response.getSedeId())
+            .empresaId(response.getEmpresaId())
+            .build();
     }
 }

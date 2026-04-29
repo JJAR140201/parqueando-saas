@@ -759,6 +759,86 @@
                                                                             ]
                                                               }
                                                   }
+                                  },
+                                  {
+                                      "name":  "Exportar a Excel",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "description":  "Exporta todas las mensualidades (o filtradas) en formato Excel",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/excel?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "mensualidades",
+                                                                               "export",
+                                                                               "excel"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "empresaId",
+                                                                                    "value":  "{{empresaId}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "sedeId",
+                                                                                    "value":  "{{sedeId}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "placa",
+                                                                                    "value":  "{{placa}}"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Exportar a PDF",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "description":  "Exporta todas las mensualidades (o filtradas) en formato PDF",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/mensualidades/export/pdf?empresaId={{empresaId}}&sedeId={{sedeId}}&placa={{placa}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "mensualidades",
+                                                                               "export",
+                                                                               "pdf"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "empresaId",
+                                                                                    "value":  "{{empresaId}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "sedeId",
+                                                                                    "value":  "{{sedeId}}"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "placa",
+                                                                                    "value":  "{{placa}}"
+                                                                                }
+                                                                            ]
+                                                              }
+                                                  }
                                   }
                               ]
                  }
