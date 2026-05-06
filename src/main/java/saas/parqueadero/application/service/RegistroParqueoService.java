@@ -197,12 +197,14 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
             throw new BusinessException("No se encontraron roles en el token");
         }
 
-        boolean isOperario = user.getRoles().stream()
+        boolean hasAllowedRole = user.getRoles().stream()
             .map(role -> role.replace("ROLE_", ""))
-            .anyMatch(role -> role.equals(RolUsuario.OPERARIO.name()));
+            .anyMatch(role -> role.equals(RolUsuario.OPERARIO.name())
+                || role.equals(RolUsuario.ADMIN.name())
+                || role.equals(RolUsuario.SUPER_ADMIN.name()));
 
-        if (!isOperario) {
-            throw new BusinessException("Solo el rol OPERARIO puede registrar entrada y salida de vehiculos");
+        if (!hasAllowedRole) {
+            throw new BusinessException("Solo los roles OPERARIO, ADMIN o SUPER_ADMIN pueden registrar entrada y salida de vehiculos");
         }
     }
 }
