@@ -30,7 +30,7 @@ public class TicketParqueoService {
     private static final DateTimeFormatter DATE_FMT  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FMT  = DateTimeFormatter.ofPattern("hh:mm:ss a");
     private static final float TICKET_WIDTH  = 226f;   // ~80 mm en puntos
-    private static final float TICKET_HEIGHT = 500f;
+    private static final float TICKET_HEIGHT = 620f;
     private static final float MARGIN        = 14f;
 
     // Fuentes
@@ -58,6 +58,16 @@ public class TicketParqueoService {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
+            Paragraph empresa = new Paragraph(valor(precio.getNombreEmpresa()), FONT_TITLE);
+            empresa.setAlignment(Element.ALIGN_CENTER);
+            empresa.setSpacingAfter(2f);
+            doc.add(empresa);
+
+            Paragraph sede = new Paragraph(valor(precio.getNombreSede()), FONT_HEADER);
+            sede.setAlignment(Element.ALIGN_CENTER);
+            sede.setSpacingAfter(6f);
+            doc.add(sede);
+
             // ---- Titulo ----
             Paragraph titulo = new Paragraph("RECIBO DE PARQUEO", FONT_TITLE);
             titulo.setAlignment(Element.ALIGN_CENTER);
@@ -76,6 +86,11 @@ public class TicketParqueoService {
             fechaPar.setAlignment(Element.ALIGN_CENTER);
             fechaPar.setSpacingAfter(6f);
             doc.add(fechaPar);
+
+            addLabelValue(doc, "CAJERO:", valor(precio.getNombreUsuario()));
+            addLabelValue(doc, "METODO:", valor(precio.getMetodoPago()));
+
+            doc.add(espaciado(2f));
 
             // ---- Placa ----
             addLabelValue(doc, "PLACA:", precio.getPlaca() != null ? precio.getPlaca() : "N/A");
@@ -102,6 +117,10 @@ public class TicketParqueoService {
                 addLabelValue(doc, "DURACION:", precio.getHoras() + " horas");
             }
 
+            if (precio.getFechaSalida() != null) {
+                addLabelValue(doc, "FECHA SAL:", precio.getFechaSalida().format(DATE_FMT));
+            }
+
             // ---- Separador punteado ----
             doc.add(espaciado(4f));
             doc.add(separador('.'));
@@ -111,7 +130,7 @@ public class TicketParqueoService {
             boolean mensualidad = Boolean.TRUE.equals(precio.getMensualidadActiva());
             String valorLabel = mensualidad ? "SIN COSTO (MENSUALIDAD)" : formatearValor(precio);
 
-            Paragraph totalPar = new Paragraph("Pagado: " + valorLabel, FONT_TOTAL);
+            Paragraph totalPar = new Paragraph("PAGADO: " + valorLabel, FONT_TOTAL);
             totalPar.setAlignment(Element.ALIGN_CENTER);
             totalPar.setSpacingAfter(2f);
             doc.add(totalPar);
@@ -191,5 +210,9 @@ public class TicketParqueoService {
             return "$ " + precio.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
         }
         return "$ 0.00";
+    }
+
+    private String valor(String value) {
+        return value != null && !value.isBlank() ? value : "N/A";
     }
 }
