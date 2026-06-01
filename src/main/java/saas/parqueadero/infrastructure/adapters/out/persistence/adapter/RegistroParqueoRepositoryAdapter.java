@@ -48,6 +48,18 @@ public class RegistroParqueoRepositoryAdapter implements RegistroParqueoReposito
     }
 
     @Override
+    public Optional<RegistroParqueo> findUltimoFinalizadoByPlacaAndSedeIdAndEmpresaId(String placa, Long sedeId, Long empresaId) {
+        return registroParqueoJpaRepository
+            .findTopByPlacaAndSedeIdAndEmpresaIdAndEstadoOrderByFechaSalidaDesc(
+                placa.trim().toUpperCase(),
+                sedeId,
+                empresaId,
+                EstadoRegistroParqueo.FINALIZADO
+            )
+            .map(mapper::toDomain);
+    }
+
+    @Override
     public List<RegistroParqueo> findReporte(Long empresaId, Long sedeId, EstadoRegistroParqueo estado, LocalDateTime desde, LocalDateTime hasta) {
         Specification<RegistroParqueoJpaEntity> specification = Specification.where(null);
 
