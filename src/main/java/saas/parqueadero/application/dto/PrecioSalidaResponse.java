@@ -16,6 +16,10 @@ public class PrecioSalidaResponse {
     private String placa;
     private TipoVehiculo tipoVehiculo;
     private String tipo;
+    private String nombreEmpresa;
+    private String nombreSede;
+    private String nombreUsuario;
+    private String metodoPago;
     private LocalDateTime fechaEntrada;
     private LocalDateTime fechaSalida;
     private Long minutosEstadia;
