@@ -10,5 +10,7 @@ public interface RegistroParqueoUseCase {
 
     PrecioSalidaResponse consultarPrecioSalida(String placa);
 
+    PrecioSalidaResponse consultarTicket(String placa);
+
     RegistroParqueoResponse registrarSalida(RegistrarSalidaRequest request);
 }

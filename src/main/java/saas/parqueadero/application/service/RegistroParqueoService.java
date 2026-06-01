@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -102,6 +103,64 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
             Tarifa tarifa = findTarifa(user, registro);
             total = calcularTotal(registro.getFechaEntrada(), fechaSalida, tarifa);
         }
+        BigDecimal horas = BigDecimal.valueOf(minutosEstadia)
+            .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+        return PrecioSalidaResponse.builder()
+            .placa(registro.getPlaca())
+            .tipoVehiculo(registro.getTipoVehiculo())
+            .tipo(registro.getTipoVehiculo() != null ? registro.getTipoVehiculo().name() : null)
+            .nombreEmpresa(empresa.getNombre())
+            .nombreSede(sede.getNombre())
+            .nombreUsuario(user.getNombre())
+            .metodoPago("EFECTIVO")
+            .fechaEntrada(registro.getFechaEntrada())
+            .fechaSalida(fechaSalida)
+            .minutosEstadia(minutosEstadia)
+            .horas(horas)
+            .totalPagado(total)
+            .total(total)
+            .mensualidadActiva(mensualidadActiva)
+            .sedeId(registro.getSedeId())
+            .empresaId(registro.getEmpresaId())
+            .build();
+    }
+
+    @Override
+    public PrecioSalidaResponse consultarTicket(String placa) {
+        log.info("[RegistroParqueoService] Consultar ticket placa={}", placa);
+        AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
+        enforceOperarioRole(user);
+
+        Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
+        Empresa empresa = empresaRepositoryPort.findById(user.getEmpresaId())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la empresa indicada"));
+
+        // Busca primero un registro activo; si no, el último finalizado
+        Optional<RegistroParqueo> activoOpt = registroParqueoRepositoryPort
+            .findActivoByPlacaAndSedeIdAndEmpresaId(placa, user.getSedeId(), user.getEmpresaId());
+
+        RegistroParqueo registro;
+        LocalDateTime fechaSalida;
+        BigDecimal total;
+        boolean mensualidadActiva;
+
+        if (activoOpt.isPresent()) {
+            registro = activoOpt.get();
+            fechaSalida = LocalDateTime.now();
+            mensualidadActiva = hasMensualidadVigente(registro, user, fechaSalida);
+            total = mensualidadActiva ? BigDecimal.ZERO : calcularTotal(registro.getFechaEntrada(), fechaSalida, findTarifa(user, registro));
+        } else {
+            registro = registroParqueoRepositoryPort
+                .findUltimoFinalizadoByPlacaAndSedeIdAndEmpresaId(placa, user.getSedeId(), user.getEmpresaId())
+                .orElseThrow(() -> new ResourceNotFoundException("No existe un registro activo o reciente para la placa indicada"));
+            fechaSalida = registro.getFechaSalida();
+            total = registro.getTotalPagado() != null ? registro.getTotalPagado() : BigDecimal.ZERO;
+            mensualidadActiva = total.compareTo(BigDecimal.ZERO) == 0 && registro.getFechaSalida() != null;
+        }
+
+        long minutosEstadia = Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes());
         BigDecimal horas = BigDecimal.valueOf(minutosEstadia)
             .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
