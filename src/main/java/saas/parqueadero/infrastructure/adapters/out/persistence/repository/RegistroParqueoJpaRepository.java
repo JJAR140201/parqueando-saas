@@ -20,5 +20,12 @@ public interface RegistroParqueoJpaRepository extends JpaRepository<RegistroParq
         EstadoRegistroParqueo estado
     );
 
+    Optional<RegistroParqueoJpaEntity> findTopByPlacaAndSedeIdAndEmpresaIdAndEstadoOrderByFechaSalidaDesc(
+        String placa,
+        Long sedeId,
+        Long empresaId,
+        EstadoRegistroParqueo estado
+    );
+
     void deleteByEmpresaId(Long empresaId);
 }
