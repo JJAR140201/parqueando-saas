@@ -22,7 +22,10 @@ import saas.parqueadero.application.dto.PrecioSalidaResponse;
 import saas.parqueadero.application.dto.RegistrarEntradaRequest;
 import saas.parqueadero.application.dto.RegistrarSalidaRequest;
 import saas.parqueadero.application.dto.RegistroParqueoResponse;
+import saas.parqueadero.application.dto.EnviarReciboPorSmsRequest;
+import saas.parqueadero.application.dto.EnviarReciboPorSmsResponse;
 import saas.parqueadero.application.service.TicketParqueoService;
+import saas.parqueadero.application.service.TwilioService;
 import saas.parqueadero.domain.port.in.RegistroParqueoUseCase;
 
 @RestController
@@ -35,6 +38,7 @@ public class RegistroParqueoController {
 
     private final RegistroParqueoUseCase registroParqueoUseCase;
     private final TicketParqueoService ticketParqueoService;
+    private final TwilioService twilioService;
 
     @PostMapping("/entrada")
     @Operation(summary = "Registrar entrada de vehiculo", responses = {
@@ -85,5 +89,42 @@ public class RegistroParqueoController {
         headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
         headers.setContentLength(pdf.length);
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/salidas/enviar-sms")
+    @Operation(summary = "Enviar recibo de parqueo por SMS", responses = {
+        @ApiResponse(responseCode = "200", description = "SMS enviado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Error de validacion o negocio"),
+        @ApiResponse(responseCode = "404", description = "No existe registro para la placa")
+    })
+    public ResponseEntity<EnviarReciboPorSmsResponse> enviarReciboPorSms(
+            @Valid @RequestBody EnviarReciboPorSmsRequest request) {
+        log.info("[RegistroParqueoController] Enviar recibo por SMS placa={} telefono={}", 
+            request.getPlaca(), request.getNumeroTelefono());
+
+        // Validar formato del número de teléfono
+        if (!twilioService.esNumeroValido(request.getNumeroTelefono())) {
+            return ResponseEntity.badRequest().body(
+                EnviarReciboPorSmsResponse.builder()
+                    .exitoso(false)
+                    .mensaje("Número de teléfono inválido. Debe estar en formato E.164 (ej: +573001234567)")
+                    .placa(request.getPlaca())
+                    .build()
+            );
+        }
+
+        // Obtener datos del recibo
+        PrecioSalidaResponse precio = registroParqueoUseCase.consultarPrecioSalida(request.getPlaca());
+
+        // Enviar SMS
+        boolean enviado = twilioService.enviarReciboPorSMS(request.getNumeroTelefono(), precio);
+
+        return ResponseEntity.ok(
+            EnviarReciboPorSmsResponse.builder()
+                .exitoso(enviado)
+                .mensaje(enviado ? "SMS enviado exitosamente" : "Error al enviar el SMS")
+                .placa(request.getPlaca())
+                .build()
+        );
     }
 }

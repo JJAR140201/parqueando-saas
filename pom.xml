@@ -114,6 +114,13 @@
 			<artifactId>openpdf</artifactId>
 			<version>2.0.3</version>
 		</dependency>
+
+		<!-- Twilio SDK for SMS -->
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>9.3.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
