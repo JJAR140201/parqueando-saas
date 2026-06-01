@@ -81,7 +81,7 @@ public class RegistroParqueoController {
     })
     public ResponseEntity<byte[]> generarTicket(@RequestParam String placa) {
         log.info("[RegistroParqueoController] Generar ticket placa={}", placa);
-        PrecioSalidaResponse precio = registroParqueoUseCase.consultarPrecioSalida(placa);
+        PrecioSalidaResponse precio = registroParqueoUseCase.consultarTicket(placa);
         byte[] pdf = ticketParqueoService.generarTicket(precio);
         String filename = "ticket-" + placa.toUpperCase() + ".pdf";
         HttpHeaders headers = new HttpHeaders();
