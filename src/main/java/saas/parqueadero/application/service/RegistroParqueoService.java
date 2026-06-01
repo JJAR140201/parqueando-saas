@@ -17,6 +17,7 @@ import saas.parqueadero.domain.exception.BusinessException;
 import saas.parqueadero.domain.exception.CapacityUnavailableException;
 import saas.parqueadero.domain.exception.ResourceNotFoundException;
 import saas.parqueadero.domain.model.AuthenticatedUser;
+import saas.parqueadero.domain.model.Empresa;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
 import saas.parqueadero.domain.model.RegistroParqueo;
 import saas.parqueadero.domain.model.RolUsuario;
@@ -24,6 +25,7 @@ import saas.parqueadero.domain.model.Sede;
 import saas.parqueadero.domain.model.Tarifa;
 import saas.parqueadero.domain.port.in.RegistroParqueoUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
+import saas.parqueadero.domain.port.out.EmpresaRepositoryPort;
 import saas.parqueadero.domain.port.out.RegistroParqueoRepositoryPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
@@ -35,6 +37,7 @@ import saas.parqueadero.domain.port.out.TarifaRepositoryPort;
 public class RegistroParqueoService implements RegistroParqueoUseCase {
 
     private final SedeRepositoryPort sedeRepositoryPort;
+    private final EmpresaRepositoryPort empresaRepositoryPort;
     private final TarifaRepositoryPort tarifaRepositoryPort;
     private final RegistroParqueoRepositoryPort registroParqueoRepositoryPort;
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
@@ -85,6 +88,10 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         enforceOperarioRole(user);
 
         RegistroParqueo registro = findRegistroActivo(placa, user);
+        Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
+        Empresa empresa = empresaRepositoryPort.findById(user.getEmpresaId())
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la empresa indicada"));
         LocalDateTime fechaSalida = LocalDateTime.now();
         long minutosEstadia = Math.max(1, Duration.between(registro.getFechaEntrada(), fechaSalida).toMinutes());
         boolean mensualidadActiva = hasMensualidadVigente(registro, user, fechaSalida);
@@ -102,6 +109,10 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
             .placa(registro.getPlaca())
             .tipoVehiculo(registro.getTipoVehiculo())
             .tipo(registro.getTipoVehiculo() != null ? registro.getTipoVehiculo().name() : null)
+            .nombreEmpresa(empresa.getNombre())
+            .nombreSede(sede.getNombre())
+            .nombreUsuario(user.getNombre())
+            .metodoPago("EFECTIVO")
             .fechaEntrada(registro.getFechaEntrada())
             .fechaSalida(fechaSalida)
             .minutosEstadia(minutosEstadia)
@@ -163,9 +174,11 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     private BigDecimal calcularTotal(LocalDateTime fechaEntrada, LocalDateTime fechaSalida, Tarifa tarifa) {
         long minutos = Math.max(1, Duration.between(fechaEntrada, fechaSalida).toMinutes());
         int minutosFraccion = Math.max(1, tarifa.getMinutosFraccion());
-        BigDecimal fracciones = BigDecimal.valueOf(minutos)
-            .divide(BigDecimal.valueOf(minutosFraccion), 0, RoundingMode.CEILING);
-        return tarifa.getValorFraccion().multiply(fracciones);
+        BigDecimal valorPorMinuto = tarifa.getValorFraccion()
+            .divide(BigDecimal.valueOf(minutosFraccion), 6, RoundingMode.HALF_UP);
+        return valorPorMinuto
+            .multiply(BigDecimal.valueOf(minutos))
+            .setScale(0, RoundingMode.HALF_UP);
     }
 
     private boolean hasMensualidadVigente(RegistroParqueo registro, AuthenticatedUser user, LocalDateTime fechaSalida) {
@@ -195,12 +208,14 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
             throw new BusinessException("No se encontraron roles en el token");
         }
 
-        boolean isOperario = user.getRoles().stream()
+        boolean hasAllowedRole = user.getRoles().stream()
             .map(role -> role.replace("ROLE_", ""))
-            .anyMatch(role -> role.equals(RolUsuario.OPERARIO.name()));
+            .anyMatch(role -> role.equals(RolUsuario.OPERARIO.name())
+                || role.equals(RolUsuario.ADMIN.name())
+                || role.equals(RolUsuario.SUPER_ADMIN.name()));
 
-        if (!isOperario) {
-            throw new BusinessException("Solo el rol OPERARIO puede registrar entrada y salida de vehiculos");
+        if (!hasAllowedRole) {
+            throw new BusinessException("Solo los roles OPERARIO, ADMIN o SUPER_ADMIN pueden registrar entrada y salida de vehiculos");
         }
     }
 }
