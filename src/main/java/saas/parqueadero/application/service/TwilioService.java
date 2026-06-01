@@ -6,6 +6,7 @@ import com.twilio.type.PhoneNumber;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 import saas.parqueadero.application.dto.PrecioSalidaResponse;
 
 /**
@@ -25,6 +26,34 @@ public class TwilioService {
     @Value("${twilio.phone-number}")
     private String twilioPhoneNumber;
 
+    private boolean isConfigured = false;
+
+    /**
+     * Inicializa Twilio después de la inyección de dependencias.
+     * Se ejecuta solo una vez al cargar el servicio.
+     */
+    @PostConstruct
+    public void initTwilio() {
+        // Validar que las credenciales estén configuradas
+        if (accountSid == null || accountSid.trim().isEmpty() ||
+            authToken == null || authToken.trim().isEmpty() ||
+            twilioPhoneNumber == null || twilioPhoneNumber.trim().isEmpty()) {
+            log.warn("[TwilioService] Credenciales de Twilio no configuradas. Las credenciales deben estar en variables de entorno o application.properties");
+            isConfigured = false;
+            return;
+        }
+
+        try {
+            // Inicializar Twilio con credenciales (solo una vez)
+            Twilio.init(accountSid, authToken);
+            isConfigured = true;
+            log.info("[TwilioService] Twilio inicializado exitosamente. Número: {}", twilioPhoneNumber);
+        } catch (Exception e) {
+            log.error("[TwilioService] Error inicializando Twilio", e);
+            isConfigured = false;
+        }
+    }
+
     /**
      * Envía un recibo de parqueo por SMS.
      *
@@ -33,9 +62,13 @@ public class TwilioService {
      * @return true si el mensaje fue enviado correctamente
      */
     public boolean enviarReciboPorSMS(String phoneNumber, PrecioSalidaResponse precio) {
+        // Validar que Twilio esté configurado
+        if (!isConfigured) {
+            log.error("[TwilioService] No se puede enviar SMS: Twilio no está configurado. Verifique TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN y TWILIO_PHONE_NUMBER");
+            return false;
+        }
+
         try {
-            // Inicializar Twilio con credenciales
-            Twilio.init(accountSid, authToken);
 
             // Generar contenido del mensaje
             String mensaje = generarMensajeRecibo(precio);
