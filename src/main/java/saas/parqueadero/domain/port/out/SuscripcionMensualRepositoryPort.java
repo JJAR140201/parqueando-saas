@@ -19,4 +19,6 @@ public interface SuscripcionMensualRepositoryPort {
     boolean existsActivaOverlapExcludingId(Long id, String placa, Long sedeId, Long empresaId, LocalDate fechaInicio, LocalDate fechaFin);
 
     List<SuscripcionMensual> findAll();
+
+    List<SuscripcionMensual> findPendientesDeAlertaVencimiento(LocalDate desde, LocalDate hasta);
 }
