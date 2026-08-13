@@ -290,6 +290,40 @@
                                                                             ]
                                                               }
                                                   }
+                                  },
+                                  {
+                                      "name":  "Enviar Recibo por SMS",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"numeroTelefono\": \"+573001234567\",\n  \"placa\": \"{{placa}}\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/v1/operaciones/parqueadero/salidas/enviar-sms",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "operaciones",
+                                                                               "parqueadero",
+                                                                               "salidas",
+                                                                               "enviar-sms"
+                                                                           ]
+                                                              }
+                                                  }
                                   }
                               ]
                  },
