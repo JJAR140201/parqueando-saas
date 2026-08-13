@@ -154,6 +154,7 @@ public class SuscripcionMensualController {
             .fechaInicio(response.getFechaInicio())
             .fechaFin(response.getFechaFin())
             .activa(response.getActiva())
+            .telefono(response.getTelefono())
             .sedeId(response.getSedeId())
             .empresaId(response.getEmpresaId())
             .build();

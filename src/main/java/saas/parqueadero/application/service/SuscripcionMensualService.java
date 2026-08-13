@@ -54,6 +54,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaInicio(request.getFechaInicio())
             .fechaFin(request.getFechaFin())
             .activa(true)
+            .telefono(request.getTelefono().trim())
+            .alertaVencimientoEnviada(false)
             .sedeId(scope.sedeId())
             .empresaId(scope.empresaId())
             .build());
@@ -88,6 +90,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             throw new BusinessException("Ya existe otra suscripcion activa para esta placa en el rango de fechas indicado");
         }
 
+        boolean fechaFinCambio = !request.getFechaFin().equals(existing.getFechaFin());
+
         SuscripcionMensual updated = suscripcionMensualRepositoryPort.save(SuscripcionMensual.builder()
             .id(existing.getId())
             .placa(existing.getPlaca())
@@ -96,6 +100,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaInicio(request.getFechaInicio())
             .fechaFin(request.getFechaFin())
             .activa(request.getActiva() != null ? request.getActiva() : existing.getActiva())
+            .telefono(request.getTelefono().trim())
+            .alertaVencimientoEnviada(fechaFinCambio ? false : existing.getAlertaVencimientoEnviada())
             .sedeId(existing.getSedeId())
             .empresaId(existing.getEmpresaId())
             .build());
@@ -230,6 +236,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaFin(suscripcion.getFechaFin())
             .activa(suscripcion.getActiva())
             .vigenteHoy(vigenteHoy)
+            .telefono(suscripcion.getTelefono())
             .sedeId(suscripcion.getSedeId())
             .empresaId(suscripcion.getEmpresaId())
             .build();
