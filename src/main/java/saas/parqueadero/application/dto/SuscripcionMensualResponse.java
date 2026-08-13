@@ -21,6 +21,7 @@ public class SuscripcionMensualResponse {
     private LocalDate fechaFin;
     private Boolean activa;
     private Boolean vigenteHoy;
+    private String telefono;
     private Long sedeId;
     private Long empresaId;
 }
