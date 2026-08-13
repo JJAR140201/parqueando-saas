@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import saas.parqueadero.application.dto.LoginRequest;
 import saas.parqueadero.application.dto.LoginResponse;
+import saas.parqueadero.application.dto.RefreshTokenRequest;
 import saas.parqueadero.application.dto.RegisterUserRequest;
 import saas.parqueadero.application.dto.RegisterUserResponse;
 import saas.parqueadero.domain.port.in.AuthUseCase;
@@ -50,5 +51,25 @@ public class AuthController {
             request.getUsername(), request.getRol(), request.getEmpresaId(), request.getSedeId());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(authUseCase.register(request));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "Renovar access token usando un refresh token", responses = {
+        @ApiResponse(responseCode = "200", description = "Tokens renovados"),
+        @ApiResponse(responseCode = "400", description = "Refresh token invalido o expirado")
+    })
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        log.info("[AuthController] Solicitud de refresh de token");
+        return ResponseEntity.ok(authUseCase.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Cerrar sesion revocando el refresh token", responses = {
+        @ApiResponse(responseCode = "204", description = "Sesion cerrada")
+    })
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        log.info("[AuthController] Solicitud de logout");
+        authUseCase.logout(request);
+        return ResponseEntity.noContent().build();
     }
 }
