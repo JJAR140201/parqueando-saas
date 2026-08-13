@@ -159,6 +159,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaInicio(existing.getFechaInicio())
             .fechaFin(existing.getFechaFin())
             .activa(false)
+            .telefono(existing.getTelefono())
+            .alertaVencimientoEnviada(existing.getAlertaVencimientoEnviada())
             .sedeId(existing.getSedeId())
             .empresaId(existing.getEmpresaId())
             .build());
