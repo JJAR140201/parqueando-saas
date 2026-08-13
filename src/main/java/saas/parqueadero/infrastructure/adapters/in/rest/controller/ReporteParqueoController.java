@@ -46,7 +46,7 @@ public class ReporteParqueoController {
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final String[] HEADERS = {
-        "ID", "Placa", "Tipo Vehiculo", "Fecha Entrada", "Fecha Salida",
+        "Placa", "Tipo Vehiculo", "Fecha Entrada", "Fecha Salida",
         "Minutos Estadia", "Total Pagado", "Estado", "Sede", "Usuario"
     };
 
@@ -128,16 +128,15 @@ public class ReporteParqueoController {
                 Row row = sheet.createRow(rowNum);
                 CellStyle style = (rowNum % 2 == 0) ? altStyle : null;
 
-                setCell(row, 0, r.getId() != null ? r.getId().toString() : "", style);
-                setCell(row, 1, r.getPlaca(), style);
-                setCell(row, 2, r.getTipoVehiculo() != null ? r.getTipoVehiculo().name() : "", style);
-                setCell(row, 3, r.getFechaEntrada() != null ? r.getFechaEntrada().format(DT_FMT) : "", style);
-                setCell(row, 4, r.getFechaSalida() != null ? r.getFechaSalida().format(DT_FMT) : "En curso", style);
-                setCell(row, 5, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-", style);
-                setCell(row, 6, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-", style);
-                setCell(row, 7, r.getEstado() != null ? r.getEstado().name() : "", style);
-                setCell(row, 8, r.getSedeNombre() != null ? r.getSedeNombre() : "-", style);
-                setCell(row, 9, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-", style);
+                setCell(row, 0, r.getPlaca(), style);
+                setCell(row, 1, r.getTipoVehiculo() != null ? r.getTipoVehiculo().name() : "", style);
+                setCell(row, 2, r.getFechaEntrada() != null ? r.getFechaEntrada().format(DT_FMT) : "", style);
+                setCell(row, 3, r.getFechaSalida() != null ? r.getFechaSalida().format(DT_FMT) : "En curso", style);
+                setCell(row, 4, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-", style);
+                setCell(row, 5, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-", style);
+                setCell(row, 6, r.getEstado() != null ? r.getEstado().name() : "", style);
+                setCell(row, 7, r.getSedeNombre() != null ? r.getSedeNombre() : "-", style);
+                setCell(row, 8, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-", style);
                 rowNum++;
             }
 
@@ -152,8 +151,8 @@ public class ReporteParqueoController {
                 .filter(r -> r.getTotalPagado() != null)
                 .map(ReporteRegistroResponse::getTotalPagado)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-            totalsRow.createCell(5).setCellValue("TOTAL COBRADO:");
-            totalsRow.createCell(6).setCellValue("$" + totalPagado.toPlainString());
+            totalsRow.createCell(4).setCellValue("TOTAL COBRADO:");
+            totalsRow.createCell(5).setCellValue("$" + totalPagado.toPlainString());
 
             wb.write(out);
             return out.toByteArray();
@@ -195,7 +194,6 @@ public class ReporteParqueoController {
         for (ReporteRegistroResponse r : registros) {
             Color bg = alt ? new Color(220, 230, 241) : Color.WHITE;
 
-            addPdfCell(table, dFont, bg, r.getId() != null ? r.getId().toString() : "");
             addPdfCell(table, dFont, bg, r.getPlaca());
             addPdfCell(table, dFont, bg, r.getTipoVehiculo() != null ? r.getTipoVehiculo().name() : "");
             addPdfCell(table, dFont, bg, r.getFechaEntrada() != null ? r.getFechaEntrada().format(DT_FMT) : "");
