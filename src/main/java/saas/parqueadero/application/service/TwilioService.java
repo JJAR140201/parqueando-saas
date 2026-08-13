@@ -62,26 +62,34 @@ public class TwilioService {
      * @return true si el mensaje fue enviado correctamente
      */
     public boolean enviarReciboPorSMS(String phoneNumber, PrecioSalidaResponse precio) {
-        // Validar que Twilio esté configurado
+        boolean enviado = enviarSms(phoneNumber, generarMensajeRecibo(precio));
+        if (enviado) {
+            log.info("[TwilioService] Recibo SMS enviado exitosamente placa={}", precio.getPlaca());
+        }
+        return enviado;
+    }
+
+    /**
+     * Envía un mensaje de texto arbitrario por SMS.
+     *
+     * @param phoneNumber número de teléfono del destinatario (formato E.164)
+     * @param mensaje contenido del mensaje
+     * @return true si el mensaje fue enviado correctamente
+     */
+    public boolean enviarSms(String phoneNumber, String mensaje) {
         if (!isConfigured) {
             log.error("[TwilioService] No se puede enviar SMS: Twilio no está configurado. Verifique TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN y TWILIO_PHONE_NUMBER");
             return false;
         }
 
         try {
-
-            // Generar contenido del mensaje
-            String mensaje = generarMensajeRecibo(precio);
-
-            // Enviar mensaje
             Message message = Message.creator(
                     new PhoneNumber(phoneNumber),        // To number
                     new PhoneNumber(twilioPhoneNumber),  // From number
                     mensaje                               // Message content
             ).create();
 
-            log.info("[TwilioService] SMS enviado exitosamente. MessageSid={}, placa={}",
-                    message.getSid(), precio.getPlaca());
+            log.info("[TwilioService] SMS enviado exitosamente. MessageSid={}", message.getSid());
             return true;
 
         } catch (Exception e) {

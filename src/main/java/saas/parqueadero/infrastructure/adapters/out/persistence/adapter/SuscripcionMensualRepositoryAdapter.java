@@ -79,4 +79,13 @@ public class SuscripcionMensualRepositoryAdapter implements SuscripcionMensualRe
             .map(mapper::toDomain)
             .collect(Collectors.toList());
     }
+
+    @Override
+    public List<SuscripcionMensual> findPendientesDeAlertaVencimiento(LocalDate desde, LocalDate hasta) {
+        return suscripcionMensualJpaRepository
+            .findByActivaTrueAndAlertaVencimientoEnviadaFalseAndFechaFinBetween(desde, hasta)
+            .stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
+    }
 }

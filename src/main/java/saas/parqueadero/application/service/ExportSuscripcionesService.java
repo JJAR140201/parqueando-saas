@@ -45,7 +45,7 @@ public class ExportSuscripcionesService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] HEADERS = {
         "ID", "Placa", "Tipo Vehiculo", "Valor Mensual", "Fecha Inicio",
-        "Fecha Fin", "Activa", "Sede", "Usuario"
+        "Fecha Fin", "Activa", "Telefono", "Sede", "Usuario"
     };
 
     public byte[] exportToExcel(List<SuscripcionMensual> suscripciones) throws IOException {
@@ -87,8 +87,9 @@ public class ExportSuscripcionesService {
                 setCell(row, 4, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
                 setCell(row, 5, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
                 setCell(row, 6, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No", style);
-                setCell(row, 7, resolveSedeNombre(suscripcion, sedeCache), style);
-                setCell(row, 8, usuarioNombre, style);
+                setCell(row, 7, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-", style);
+                setCell(row, 8, resolveSedeNombre(suscripcion, sedeCache), style);
+                setCell(row, 9, usuarioNombre, style);
                 rowNum++;
             }
 
@@ -147,6 +148,7 @@ public class ExportSuscripcionesService {
             addPdfCell(table, dataFont, bg, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No");
+            addPdfCell(table, dataFont, bg, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-");
             addPdfCell(table, dataFont, bg, resolveSedeNombre(suscripcion, sedeCache));
             addPdfCell(table, dataFont, bg, usuarioNombre);
             alt = !alt;

@@ -35,4 +35,9 @@ public interface SuscripcionMensualJpaRepository extends JpaRepository<Suscripci
     );
 
     List<SuscripcionMensualJpaEntity> findAll();
+
+    List<SuscripcionMensualJpaEntity> findByActivaTrueAndAlertaVencimientoEnviadaFalseAndFechaFinBetween(
+        LocalDate desde,
+        LocalDate hasta
+    );
 }
