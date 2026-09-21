@@ -44,6 +44,25 @@ public class MensualidadVencimientoNotificationService {
         pendientes.forEach(this::enviarAlerta);
     }
 
+    /**
+     * Cancela automaticamente las mensualidades activas cuya fechaFin ya paso. Si el cliente
+     * paga y renueva, la reactivacion es manual (editar fechas + marcar activa) desde la UI.
+     */
+    @Scheduled(cron = "${app.mensualidad.cancelacion.cron}", zone = "America/Bogota")
+    public void cancelarVencidas() {
+        LocalDate hoy = LocalDate.now();
+        List<SuscripcionMensual> vencidas = suscripcionMensualRepositoryPort.findActivasVencidas(hoy);
+
+        log.info("[MensualidadVencimientoNotificationService] {} mensualidades vencidas para cancelar automaticamente", vencidas.size());
+
+        vencidas.forEach(suscripcion -> {
+            suscripcion.setActiva(false);
+            suscripcionMensualRepositoryPort.save(suscripcion);
+            log.info("[MensualidadVencimientoNotificationService] Mensualidad cancelada automaticamente por vencimiento id={} placa={} fechaFin={}",
+                suscripcion.getId(), suscripcion.getPlaca(), suscripcion.getFechaFin());
+        });
+    }
+
     private void enviarAlerta(SuscripcionMensual suscripcion) {
         if (suscripcion.getTelefono() == null || suscripcion.getTelefono().isBlank()) {
             log.warn("[MensualidadVencimientoNotificationService] Suscripcion id={} placa={} no tiene telefono registrado, se omite alerta",
