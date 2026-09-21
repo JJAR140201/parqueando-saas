@@ -17,5 +17,11 @@ public interface RegistroParqueoRepositoryPort {
 
     List<RegistroParqueo> findReporte(Long empresaId, Long sedeId, EstadoRegistroParqueo estado, LocalDateTime desde, LocalDateTime hasta);
 
+    /**
+     * Registros relevantes para el resumen del dia: los que siguen ACTIVOS (sin importar cuando
+     * entraron) mas los que tuvieron entrada o salida dentro de [inicioDia, finDia].
+     */
+    List<RegistroParqueo> findActividadDelDia(Long empresaId, Long sedeId, LocalDateTime inicioDia, LocalDateTime finDia);
+
     void deleteByEmpresaId(Long empresaId);
 }

@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import saas.parqueadero.application.dto.ReporteRegistroResponse;
+import saas.parqueadero.application.dto.ResumenDiaResponse;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
 import saas.parqueadero.domain.port.in.ReporteParqueoUseCase;
 
@@ -61,6 +62,14 @@ public class ReporteParqueoController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
     ) {
         return ResponseEntity.ok(reporteParqueoUseCase.getReporte(empresaId, sedeId, estado, desde, hasta));
+    }
+
+    @GetMapping("/resumen-dia")
+    public ResponseEntity<ResumenDiaResponse> getResumenDia(
+        @RequestParam(required = false) Long empresaId,
+        @RequestParam(required = false) Long sedeId
+    ) {
+        return ResponseEntity.ok(reporteParqueoUseCase.getResumenDia(empresaId, sedeId));
     }
 
     @GetMapping("/parqueo/excel")

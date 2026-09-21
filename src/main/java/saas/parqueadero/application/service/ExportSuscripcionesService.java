@@ -44,7 +44,7 @@ public class ExportSuscripcionesService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final String[] HEADERS = {
-        "ID", "Placa", "Tipo Vehiculo", "Valor Mensual", "Fecha Inicio",
+        "Placa", "Tipo Vehiculo", "Valor Mensual", "Fecha Inicio",
         "Fecha Fin", "Activa", "Telefono", "Sede", "Usuario"
     };
 
@@ -80,16 +80,15 @@ public class ExportSuscripcionesService {
                 Row row = sheet.createRow(rowNum);
                 CellStyle style = (rowNum % 2 == 0) ? altStyle : null;
 
-                setCell(row, 0, suscripcion.getId() != null ? suscripcion.getId().toString() : "", style);
-                setCell(row, 1, suscripcion.getPlaca(), style);
-                setCell(row, 2, suscripcion.getTipoVehiculo() != null ? suscripcion.getTipoVehiculo().name() : "", style);
-                setCell(row, 3, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-", style);
-                setCell(row, 4, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
-                setCell(row, 5, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
-                setCell(row, 6, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No", style);
-                setCell(row, 7, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-", style);
-                setCell(row, 8, resolveSedeNombre(suscripcion, sedeCache), style);
-                setCell(row, 9, usuarioNombre, style);
+                setCell(row, 0, suscripcion.getPlaca(), style);
+                setCell(row, 1, suscripcion.getTipoVehiculo() != null ? suscripcion.getTipoVehiculo().name() : "", style);
+                setCell(row, 2, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-", style);
+                setCell(row, 3, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
+                setCell(row, 4, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
+                setCell(row, 5, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No", style);
+                setCell(row, 6, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-", style);
+                setCell(row, 7, resolveSedeNombre(suscripcion, sedeCache), style);
+                setCell(row, 8, usuarioNombre, style);
                 rowNum++;
             }
 
@@ -141,7 +140,6 @@ public class ExportSuscripcionesService {
         for (SuscripcionMensual suscripcion : suscripciones) {
             Color bg = alt ? new Color(220, 230, 241) : Color.WHITE;
 
-            addPdfCell(table, dataFont, bg, suscripcion.getId() != null ? suscripcion.getId().toString() : "");
             addPdfCell(table, dataFont, bg, suscripcion.getPlaca() != null ? suscripcion.getPlaca() : "");
             addPdfCell(table, dataFont, bg, suscripcion.getTipoVehiculo() != null ? suscripcion.getTipoVehiculo().name() : "");
             addPdfCell(table, dataFont, bg, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-");
