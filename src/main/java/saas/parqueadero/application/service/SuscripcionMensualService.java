@@ -1,10 +1,12 @@
 package saas.parqueadero.application.service;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import saas.parqueadero.application.dto.CreateSuscripcionMensualRequest;
@@ -28,6 +30,9 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
     private final SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
     private final SedeRepositoryPort sedeRepositoryPort;
+
+    @Value("${app.mensualidad.alerta.dias-anticipacion}")
+    private int diasAnticipacion;
 
     @Override
     @Transactional
@@ -166,6 +171,28 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .build());
 
         log.warn("[SuscripcionMensualService] Suscripcion cancelada id={} placa={}", existing.getId(), existing.getPlaca());
+    }
+
+    @Override
+    public List<SuscripcionMensualResponse> listProximasAVencer(Long empresaId, Long sedeId) {
+        AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        LocalDate hoy = LocalDate.now();
+        LocalDate limite = hoy.plusDays(diasAnticipacion);
+
+        List<SuscripcionMensual> candidatas;
+        if (hasRole(currentUser, RolUsuario.SUPER_ADMIN) && empresaId == null && sedeId == null) {
+            candidatas = suscripcionMensualRepositoryPort.findAll();
+        } else {
+            Scope scope = resolveScope(currentUser, empresaId, sedeId);
+            candidatas = suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId());
+        }
+
+        return candidatas.stream()
+            .filter(s -> Boolean.TRUE.equals(s.getActiva()))
+            .filter(s -> s.getFechaFin() != null && !s.getFechaFin().isBefore(hoy) && !s.getFechaFin().isAfter(limite))
+            .sorted(Comparator.comparing(SuscripcionMensual::getFechaFin))
+            .map(this::toResponse)
+            .collect(Collectors.toList());
     }
 
     private Scope resolveScope(AuthenticatedUser user, Long empresaIdParam, Long sedeIdParam) {

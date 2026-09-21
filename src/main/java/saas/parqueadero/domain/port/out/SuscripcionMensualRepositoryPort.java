@@ -21,4 +21,6 @@ public interface SuscripcionMensualRepositoryPort {
     List<SuscripcionMensual> findAll();
 
     List<SuscripcionMensual> findPendientesDeAlertaVencimiento(LocalDate desde, LocalDate hasta);
+
+    List<SuscripcionMensual> findActivasVencidas(LocalDate hoy);
 }
