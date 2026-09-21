@@ -17,14 +17,19 @@ public class LicenseSerialCodecConfig {
 
     @Bean
     public LicenseSerialCodec licenseSerialCodec(LicenseProperties properties) {
-        if (properties.hmacSecret() == null || properties.hmacSecret().isBlank()) {
-            throw new IllegalStateException(
-                "app.license.hmac-secret (variable de entorno LICENSE_HMAC_SECRET) es obligatorio");
-        }
-        if (DEV_DEFAULT_SECRET.equals(properties.hmacSecret())) {
+        // Ojo: si LICENSE_HMAC_SECRET existe en el entorno pero vacia (no ausente), el
+        // placeholder ${LICENSE_HMAC_SECRET:default} de application.properties NO aplica el
+        // default (Spring solo lo usa cuando la variable no existe). Por eso el fallback se
+        // maneja aqui tambien, en vez de fallar duro como con app.jwt.secret.
+        String secret = properties.hmacSecret();
+        if (secret == null || secret.isBlank()) {
+            log.warn("[LicenseSerialCodecConfig] app.license.hmac-secret no esta configurado, usando el secreto de "
+                + "desarrollo por defecto. Configura la variable de entorno LICENSE_HMAC_SECRET antes de emitir licencias reales.");
+            secret = DEV_DEFAULT_SECRET;
+        } else if (DEV_DEFAULT_SECRET.equals(secret)) {
             log.warn("[LicenseSerialCodecConfig] Usando el secreto de licencia por defecto de desarrollo. "
                 + "Configura la variable de entorno LICENSE_HMAC_SECRET antes de emitir licencias reales.");
         }
-        return new LicenseSerialCodec(Base64.getDecoder().decode(properties.hmacSecret()));
+        return new LicenseSerialCodec(Base64.getDecoder().decode(secret));
     }
 }
