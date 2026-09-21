@@ -13,4 +13,10 @@ public interface SuscripcionMensualUseCase {
     List<SuscripcionMensualResponse> listSuscripciones(Long empresaId, Long sedeId, String placa);
 
     void cancelSuscripcion(Long id, Long empresaId, Long sedeId);
+
+    /**
+     * Mensualidades activas que vencen entre hoy y hoy + dias de anticipacion configurados
+     * (app.mensualidad.alerta.dias-anticipacion). Para el banner de aviso al ADMIN/usuario logueado.
+     */
+    List<SuscripcionMensualResponse> listProximasAVencer(Long empresaId, Long sedeId);
 }
