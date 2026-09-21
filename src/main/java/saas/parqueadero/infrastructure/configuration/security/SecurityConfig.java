@@ -39,7 +39,12 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout"
+                                "/api/v1/auth/logout",
+                                // Sincronizacion del escritorio: auth por token propio (X-Sync-Token), no JWT
+                                "/api/v1/sync/**",
+                                // Activacion publica de licencias: el cliente aun no tiene usuario/JWT
+                                "/api/v1/licencias/validar",
+                                "/api/v1/licencias/redimir"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
