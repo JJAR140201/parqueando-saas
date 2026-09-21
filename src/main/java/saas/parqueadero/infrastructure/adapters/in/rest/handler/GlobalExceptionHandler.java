@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import saas.parqueadero.domain.exception.BusinessException;
+import saas.parqueadero.domain.exception.LicenciaInvalidaException;
 import saas.parqueadero.domain.exception.ResourceNotFoundException;
+import saas.parqueadero.domain.exception.UnauthorizedException;
 
 @RestControllerAdvice
 @Slf4j
@@ -24,6 +26,20 @@ public class GlobalExceptionHandler {
         log.warn("[GlobalExceptionHandler] NOT_FOUND: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(build("NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
+        log.warn("[GlobalExceptionHandler] UNAUTHORIZED: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(build("UNAUTHORIZED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LicenciaInvalidaException.class)
+    public ResponseEntity<ErrorResponse> handleLicenciaInvalida(LicenciaInvalidaException ex) {
+        log.warn("[GlobalExceptionHandler] LICENCIA_INVALIDA: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(build("LICENCIA_INVALIDA", ex.getMessage()));
     }
 
     @ExceptionHandler(BusinessException.class)

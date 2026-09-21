@@ -1,12 +1,7 @@
 package saas.parqueadero.application.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,35 +13,34 @@ import saas.parqueadero.application.dto.RefreshTokenRequest;
 import saas.parqueadero.application.dto.RegisterUserRequest;
 import saas.parqueadero.application.dto.RegisterUserResponse;
 import saas.parqueadero.domain.exception.BusinessException;
+import saas.parqueadero.domain.exception.LicenciaInvalidaException;
 import saas.parqueadero.domain.exception.ResourceNotFoundException;
 import saas.parqueadero.domain.model.AuthenticatedUser;
+import saas.parqueadero.domain.model.EstadoLicencia;
+import saas.parqueadero.domain.model.Licencia;
 import saas.parqueadero.domain.model.RefreshToken;
 import saas.parqueadero.domain.model.RolUsuario;
 import saas.parqueadero.domain.model.Sede;
 import saas.parqueadero.domain.model.Usuario;
 import saas.parqueadero.domain.port.in.AuthUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
+import saas.parqueadero.domain.port.out.LicenciaRepositoryPort;
 import saas.parqueadero.domain.port.out.RefreshTokenRepositoryPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 import saas.parqueadero.domain.port.out.UsuarioRepositoryPort;
-import saas.parqueadero.infrastructure.configuration.security.JwtProperties;
-import saas.parqueadero.infrastructure.configuration.security.JwtTokenProvider;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService implements AuthUseCase {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int REFRESH_TOKEN_BYTES = 64;
-
     private final UsuarioRepositoryPort usuarioRepositoryPort;
     private final SedeRepositoryPort sedeRepositoryPort;
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
     private final RefreshTokenRepositoryPort refreshTokenRepositoryPort;
+    private final LicenciaRepositoryPort licenciaRepositoryPort;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final JwtProperties jwtProperties;
+    private final TokenIssuanceService tokenIssuanceService;
 
     @Override
     @Transactional
@@ -62,13 +56,15 @@ public class AuthService implements AuthUseCase {
             throw new BusinessException("Credenciales invalidas");
         }
 
-        return buildLoginResponse(usuario);
+        checkLicenciaActiva(usuario);
+
+        return tokenIssuanceService.buildLoginResponse(usuario);
     }
 
     @Override
     @Transactional
     public LoginResponse refresh(RefreshTokenRequest request) {
-        String tokenHash = hashToken(request.getRefreshToken());
+        String tokenHash = tokenIssuanceService.hashToken(request.getRefreshToken());
         RefreshToken existing = refreshTokenRepositoryPort.findByTokenHash(tokenHash)
             .orElseThrow(() -> new BusinessException("Refresh token invalido"));
 
@@ -85,17 +81,19 @@ public class AuthService implements AuthUseCase {
         Usuario usuario = usuarioRepositoryPort.findById(existing.getUsuarioId())
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
+        checkLicenciaActiva(usuario);
+
         existing.setRevoked(true);
         refreshTokenRepositoryPort.save(existing);
 
         log.info("[AuthService] Access token renovado usuarioId={}", usuario.getId());
-        return buildLoginResponse(usuario);
+        return tokenIssuanceService.buildLoginResponse(usuario);
     }
 
     @Override
     @Transactional
     public void logout(RefreshTokenRequest request) {
-        String tokenHash = hashToken(request.getRefreshToken());
+        String tokenHash = tokenIssuanceService.hashToken(request.getRefreshToken());
         refreshTokenRepositoryPort.findByTokenHash(tokenHash)
             .ifPresent(existing -> {
                 existing.setRevoked(true);
@@ -104,61 +102,24 @@ public class AuthService implements AuthUseCase {
             });
     }
 
-    private LoginResponse buildLoginResponse(Usuario usuario) {
-        String accessToken = jwtTokenProvider.generateToken(usuario);
-        String refreshToken = issueRefreshToken(usuario);
-
-        return LoginResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .tokenType("Bearer")
-            .usuarioId(usuario.getId())
-            .nombre(usuario.getNombre())
-            .empresaId(usuario.getEmpresaId())
-            .sedeId(usuario.getSedeId())
-            .username(usuario.getUsername())
-            .rol(usuario.getRol().name())
-            .build();
-    }
-
-    private String issueRefreshToken(Usuario usuario) {
-        String rawToken = generateOpaqueToken();
-        LocalDateTime now = LocalDateTime.now();
-
-        refreshTokenRepositoryPort.save(RefreshToken.builder()
-            .usuarioId(usuario.getId())
-            .tokenHash(hashToken(rawToken))
-            .expiresAt(now.plus(Duration.ofMillis(resolveRefreshExpirationMillis(usuario.getRol()))))
-            .revoked(false)
-            .createdAt(now)
-            .build());
-
-        return rawToken;
-    }
-
-    private long resolveRefreshExpirationMillis(RolUsuario rol) {
-        JwtProperties.RefreshExpirationMillis config = jwtProperties.refreshExpirationMillis();
-        return switch (rol) {
-            case SUPER_ADMIN -> config.superAdmin();
-            case ADMIN -> config.admin();
-            case OPERARIO -> config.operario();
-        };
-    }
-
-    private String generateOpaqueToken() {
-        byte[] bytes = new byte[REFRESH_TOKEN_BYTES];
-        SECURE_RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private String hashToken(String rawToken) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 no disponible", ex);
+    /**
+     * Empresas sin ninguna fila de {@link Licencia} (todas las creadas manualmente antes de
+     * este feature) quedan exentas del bloqueo. Solo se bloquea el login/refresh si existe una
+     * licencia asociada y esta REVOCADA o vencida.
+     */
+    private void checkLicenciaActiva(Usuario usuario) {
+        if (usuario.getEmpresaId() == null) {
+            return;
         }
+
+        licenciaRepositoryPort.findByEmpresaId(usuario.getEmpresaId()).ifPresent(licencia -> {
+            if (licencia.getEstado() == EstadoLicencia.REVOCADA) {
+                throw new LicenciaInvalidaException("La licencia de tu empresa fue revocada. Contacta al proveedor.");
+            }
+            if (licencia.getFechaExpiracion().isBefore(LocalDate.now())) {
+                throw new LicenciaInvalidaException("La licencia de tu empresa esta vencida. Contacta al proveedor para renovarla.");
+            }
+        });
     }
 
     private boolean isPasswordValid(String rawPassword, String storedPassword) {
