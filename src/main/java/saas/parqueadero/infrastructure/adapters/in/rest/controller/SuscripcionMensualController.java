@@ -25,7 +25,6 @@ import saas.parqueadero.application.dto.CreateSuscripcionMensualRequest;
 import saas.parqueadero.application.dto.SuscripcionMensualResponse;
 import saas.parqueadero.application.dto.UpdateSuscripcionMensualRequest;
 import saas.parqueadero.application.service.ExportSuscripcionesService;
-import saas.parqueadero.domain.model.SuscripcionMensual;
 import saas.parqueadero.domain.port.in.SuscripcionMensualUseCase;
 
 @RestController
@@ -101,11 +100,7 @@ public class SuscripcionMensualController {
         log.info("[SuscripcionMensualController] Exportar a Excel empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
         try {
             List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
-            List<SuscripcionMensual> suscripcionesModelo = suscripciones.stream()
-                .map(this::toModel)
-                .toList();
-            
-            byte[] excelFile = exportSuscripcionesService.exportToExcel(suscripcionesModelo);
+            byte[] excelFile = exportSuscripcionesService.exportToExcel(suscripciones);
             
             return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mensualidades.xlsx")
@@ -129,11 +124,7 @@ public class SuscripcionMensualController {
         log.info("[SuscripcionMensualController] Exportar a PDF empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
         try {
             List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
-            List<SuscripcionMensual> suscripcionesModelo = suscripciones.stream()
-                .map(this::toModel)
-                .toList();
-            
-            byte[] pdfFile = exportSuscripcionesService.exportToPdf(suscripcionesModelo);
+            byte[] pdfFile = exportSuscripcionesService.exportToPdf(suscripciones);
             
             return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mensualidades.pdf")
@@ -143,20 +134,5 @@ public class SuscripcionMensualController {
             log.error("[SuscripcionMensualController] Error al exportar a PDF", e);
             throw new RuntimeException("Error al exportar a PDF", e);
         }
-    }
-
-    private SuscripcionMensual toModel(SuscripcionMensualResponse response) {
-        return SuscripcionMensual.builder()
-            .id(response.getId())
-            .placa(response.getPlaca())
-            .tipoVehiculo(response.getTipoVehiculo())
-            .valorMensual(response.getValorMensual())
-            .fechaInicio(response.getFechaInicio())
-            .fechaFin(response.getFechaFin())
-            .activa(response.getActiva())
-            .telefono(response.getTelefono())
-            .sedeId(response.getSedeId())
-            .empresaId(response.getEmpresaId())
-            .build();
     }
 }

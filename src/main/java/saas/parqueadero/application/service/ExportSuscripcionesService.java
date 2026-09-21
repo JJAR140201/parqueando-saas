@@ -29,9 +29,9 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+import saas.parqueadero.application.dto.SuscripcionMensualResponse;
 import saas.parqueadero.domain.model.AuthenticatedUser;
 import saas.parqueadero.domain.model.Sede;
-import saas.parqueadero.domain.model.SuscripcionMensual;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 
@@ -48,7 +48,7 @@ public class ExportSuscripcionesService {
         "Fecha Fin", "Activa", "Telefono", "Sede", "Usuario"
     };
 
-    public byte[] exportToExcel(List<SuscripcionMensual> suscripciones) throws IOException {
+    public byte[] exportToExcel(List<SuscripcionMensualResponse> suscripciones) throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Mensualidades");
             Map<String, String> sedeCache = new HashMap<>();
@@ -76,7 +76,7 @@ public class ExportSuscripcionesService {
             altStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             int rowNum = 1;
-            for (SuscripcionMensual suscripcion : suscripciones) {
+            for (SuscripcionMensualResponse suscripcion : suscripciones) {
                 Row row = sheet.createRow(rowNum);
                 CellStyle style = (rowNum % 2 == 0) ? altStyle : null;
 
@@ -85,7 +85,7 @@ public class ExportSuscripcionesService {
                 setCell(row, 2, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-", style);
                 setCell(row, 3, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
                 setCell(row, 4, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
-                setCell(row, 5, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No", style);
+                setCell(row, 5, Boolean.TRUE.equals(suscripcion.getVigenteHoy()) ? "Si" : "No", style);
                 setCell(row, 6, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-", style);
                 setCell(row, 7, resolveSedeNombre(suscripcion, sedeCache), style);
                 setCell(row, 8, usuarioNombre, style);
@@ -101,7 +101,7 @@ public class ExportSuscripcionesService {
             totalsRow.createCell(1).setCellValue(suscripciones.size());
             BigDecimal totalMensual = suscripciones.stream()
                 .filter(s -> s.getValorMensual() != null)
-                .map(SuscripcionMensual::getValorMensual)
+                .map(SuscripcionMensualResponse::getValorMensual)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalsRow.createCell(3).setCellValue("TOTAL VALOR MENSUAL:");
             totalsRow.createCell(4).setCellValue("$" + totalMensual.toPlainString());
@@ -111,7 +111,7 @@ public class ExportSuscripcionesService {
         }
     }
 
-    public byte[] exportToPdf(List<SuscripcionMensual> suscripciones) {
+    public byte[] exportToPdf(List<SuscripcionMensualResponse> suscripciones) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4.rotate());
         PdfWriter.getInstance(document, out);
@@ -137,7 +137,7 @@ public class ExportSuscripcionesService {
 
         Font dataFont = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.BLACK);
         boolean alt = false;
-        for (SuscripcionMensual suscripcion : suscripciones) {
+        for (SuscripcionMensualResponse suscripcion : suscripciones) {
             Color bg = alt ? new Color(220, 230, 241) : Color.WHITE;
 
             addPdfCell(table, dataFont, bg, suscripcion.getPlaca() != null ? suscripcion.getPlaca() : "");
@@ -145,7 +145,7 @@ public class ExportSuscripcionesService {
             addPdfCell(table, dataFont, bg, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "");
-            addPdfCell(table, dataFont, bg, Boolean.TRUE.equals(suscripcion.getActiva()) ? "Si" : "No");
+            addPdfCell(table, dataFont, bg, Boolean.TRUE.equals(suscripcion.getVigenteHoy()) ? "Si" : "No");
             addPdfCell(table, dataFont, bg, suscripcion.getTelefono() != null ? suscripcion.getTelefono() : "-");
             addPdfCell(table, dataFont, bg, resolveSedeNombre(suscripcion, sedeCache));
             addPdfCell(table, dataFont, bg, usuarioNombre);
@@ -157,7 +157,7 @@ public class ExportSuscripcionesService {
         document.add(new Paragraph(" "));
         BigDecimal totalMensual = suscripciones.stream()
             .filter(s -> s.getValorMensual() != null)
-            .map(SuscripcionMensual::getValorMensual)
+            .map(SuscripcionMensualResponse::getValorMensual)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         Font summaryFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.DARK_GRAY);
         document.add(new Paragraph("Total registros: " + suscripciones.size(), summaryFont));
@@ -182,7 +182,7 @@ public class ExportSuscripcionesService {
         table.addCell(cell);
     }
 
-    private String resolveSedeNombre(SuscripcionMensual suscripcion, Map<String, String> sedeCache) {
+    private String resolveSedeNombre(SuscripcionMensualResponse suscripcion, Map<String, String> sedeCache) {
         if (suscripcion.getEmpresaId() == null || suscripcion.getSedeId() == null) {
             return "-";
         }
