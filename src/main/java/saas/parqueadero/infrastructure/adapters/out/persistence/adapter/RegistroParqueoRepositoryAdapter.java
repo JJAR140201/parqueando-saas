@@ -89,6 +89,32 @@ public class RegistroParqueoRepositoryAdapter implements RegistroParqueoReposito
     }
 
     @Override
+    public List<RegistroParqueo> findActividadDelDia(Long empresaId, Long sedeId, LocalDateTime inicioDia, LocalDateTime finDia) {
+        Specification<RegistroParqueoJpaEntity> specification = Specification.where(null);
+
+        if (empresaId != null) {
+            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("empresaId"), empresaId));
+        }
+
+        if (sedeId != null) {
+            specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("sedeId"), sedeId));
+        }
+
+        Specification<RegistroParqueoJpaEntity> actividadDelDia = (root, query, criteriaBuilder) -> criteriaBuilder.or(
+            criteriaBuilder.equal(root.get("estado"), EstadoRegistroParqueo.ACTIVO),
+            criteriaBuilder.between(root.get("fechaEntrada"), inicioDia, finDia),
+            criteriaBuilder.and(
+                criteriaBuilder.equal(root.get("estado"), EstadoRegistroParqueo.FINALIZADO),
+                criteriaBuilder.between(root.get("fechaSalida"), inicioDia, finDia)
+            )
+        );
+
+        return registroParqueoJpaRepository.findAll(specification.and(actividadDelDia)).stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
+    }
+
+    @Override
     public void deleteByEmpresaId(Long empresaId) {
         registroParqueoJpaRepository.deleteByEmpresaId(empresaId);
     }

@@ -10,12 +10,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import saas.parqueadero.application.dto.ConteoPorTipoResponse;
 import saas.parqueadero.application.dto.ReporteRegistroResponse;
+import saas.parqueadero.application.dto.ResumenDiaResponse;
 import saas.parqueadero.domain.exception.BusinessException;
 import saas.parqueadero.domain.model.AuthenticatedUser;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
 import saas.parqueadero.domain.model.RegistroParqueo;
 import saas.parqueadero.domain.model.RolUsuario;
+import saas.parqueadero.domain.model.TipoVehiculo;
 import saas.parqueadero.domain.port.in.ReporteParqueoUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
 import saas.parqueadero.domain.port.out.RegistroParqueoRepositoryPort;
@@ -51,6 +54,50 @@ public class ReporteParqueoService implements ReporteParqueoUseCase {
             .stream()
             .map(registro -> toResponse(registro, sedesByScopeAndId, usuariosById))
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public ResumenDiaResponse getResumenDia(Long empresaId, Long sedeId) {
+        AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        RolUsuario rol = resolveRol(currentUser);
+
+        Scope scope = resolveScopeByRole(currentUser, rol, empresaId, sedeId);
+
+        LocalDate hoy = LocalDate.now();
+        LocalDateTime inicioDia = hoy.atStartOfDay();
+        LocalDateTime finDia = hoy.atTime(LocalTime.MAX);
+
+        List<RegistroParqueo> registros = registroParqueoRepositoryPort
+            .findActividadDelDia(scope.empresaId(), scope.sedeId(), inicioDia, finDia);
+
+        ConteoPorTipoResponse dentro = contarPorTipo(registros, r -> r.getEstado() == EstadoRegistroParqueo.ACTIVO);
+        ConteoPorTipoResponse entradasHoy = contarPorTipo(registros, r -> r.getFechaEntrada() != null
+            && !r.getFechaEntrada().isBefore(inicioDia) && !r.getFechaEntrada().isAfter(finDia));
+        ConteoPorTipoResponse salidasHoy = contarPorTipo(registros, r -> r.getEstado() == EstadoRegistroParqueo.FINALIZADO
+            && r.getFechaSalida() != null && !r.getFechaSalida().isBefore(inicioDia) && !r.getFechaSalida().isAfter(finDia));
+
+        return ResumenDiaResponse.builder()
+            .fecha(hoy)
+            .dentro(dentro)
+            .entradasHoy(entradasHoy)
+            .salidasHoy(salidasHoy)
+            .build();
+    }
+
+    private ConteoPorTipoResponse contarPorTipo(List<RegistroParqueo> registros, java.util.function.Predicate<RegistroParqueo> filtro) {
+        int carros = 0;
+        int motos = 0;
+        for (RegistroParqueo registro : registros) {
+            if (!filtro.test(registro)) {
+                continue;
+            }
+            if (registro.getTipoVehiculo() == TipoVehiculo.CARRO) {
+                carros++;
+            } else if (registro.getTipoVehiculo() == TipoVehiculo.MOTO) {
+                motos++;
+            }
+        }
+        return ConteoPorTipoResponse.builder().carros(carros).motos(motos).total(carros + motos).build();
     }
 
     private RolUsuario resolveRol(AuthenticatedUser user) {
