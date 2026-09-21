@@ -53,6 +53,7 @@ public class SuperAdminService implements SuperAdminUseCase {
     private final TarifaRepositoryPort tarifaRepositoryPort;
     private final RegistroParqueoRepositoryPort registroParqueoRepositoryPort;
     private final PasswordEncoder passwordEncoder;
+    private final TenantProvisioningService tenantProvisioningService;
 
     @Override
     public List<SedeSummaryResponse> listSedesByEmpresa(Long empresaId) {
@@ -126,91 +127,22 @@ public class SuperAdminService implements SuperAdminUseCase {
     }
 
     @Override
-    @Transactional
     public CreateEmpresaResponse createEmpresaWithSedes(CreateEmpresaRequest request) {
         log.info("[SuperAdminService] Crear empresa nit={} nombre={} sedes={}", request.getNit(), request.getNombre(), request.getSedes().size());
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
         enforceSuperAdmin(currentUser);
 
-        String normalizedNit = request.getNit().trim();
-        empresaRepositoryPort.findByNit(normalizedNit).ifPresent(existing -> {
-            throw new BusinessException("Ya existe una empresa registrada con el mismo NIT");
-        });
-
-        Empresa createdEmpresa = empresaRepositoryPort.save(Empresa.builder()
-            .nit(normalizedNit)
-            .nombre(request.getNombre().trim())
-            .build());
-
-        List<SedeSummaryResponse> sedes = new ArrayList<>();
-        request.getSedes().forEach(sedeRequest -> {
-            Sede createdSede = sedeRepositoryPort.save(Sede.builder()
-                .nombre(sedeRequest.getNombre().trim())
-                .capacidadTotal(sedeRequest.getCapacidadTotal())
-                .capacidadActual(sedeRequest.getCapacidadTotal())
-                .empresaId(createdEmpresa.getId())
-                .build());
-
-            sedes.add(SedeSummaryResponse.builder()
-                .id(createdSede.getId())
-                .nombre(createdSede.getNombre())
-                .capacidadTotal(createdSede.getCapacidadTotal())
-                .capacidadActual(createdSede.getCapacidadActual())
-                .build());
-        });
-
-        return CreateEmpresaResponse.builder()
-            .empresaId(createdEmpresa.getId())
-            .nit(createdEmpresa.getNit())
-            .nombre(createdEmpresa.getNombre())
-            .sedes(sedes)
-            .build();
+        return tenantProvisioningService.createEmpresaWithSedes(request);
     }
 
     @Override
-    @Transactional
     public RegisterUserResponse createUserForEmpresa(CreateEmpresaUserRequest request) {
         log.info("[SuperAdminService] Crear usuario por empresa username={} rol={} empresaId={} sedeId={}",
             request.getUsername(), request.getRol(), request.getEmpresaId(), request.getSedeId());
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
         enforceSuperAdmin(currentUser);
 
-        if (request.getRol() == RolUsuario.SUPER_ADMIN) {
-            throw new BusinessException("Use /api/v1/auth/register para crear SUPER_ADMIN");
-        }
-
-        empresaRepositoryPort.findById(request.getEmpresaId())
-            .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
-
-        Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(request.getSedeId(), request.getEmpresaId())
-            .orElseThrow(() -> new ResourceNotFoundException("La sede no existe para la empresa indicada"));
-
-        String normalizedUsername = request.getUsername().trim();
-        String normalizedNombre = request.getNombre() == null || request.getNombre().isBlank()
-            ? normalizedUsername
-            : request.getNombre().trim();
-        usuarioRepositoryPort.findByUsernameAndEmpresaId(normalizedUsername, request.getEmpresaId())
-            .ifPresent(user -> {
-                throw new BusinessException("Ya existe un usuario con ese username en la empresa");
-            });
-
-        Usuario created = usuarioRepositoryPort.save(Usuario.builder()
-            .nombre(normalizedNombre)
-            .username(normalizedUsername)
-            .password(passwordEncoder.encode(request.getPassword()))
-            .rol(request.getRol())
-            .empresaId(request.getEmpresaId())
-            .sedeId(sede.getId())
-            .build());
-
-        return RegisterUserResponse.builder()
-            .usuarioId(created.getId())
-            .nombre(created.getNombre())
-            .username(created.getUsername())
-            .rol(created.getRol().name())
-            .empresaId(created.getEmpresaId())
-            .sedeId(created.getSedeId())
-            .build();
+        return tenantProvisioningService.createUserForEmpresa(request);
     }
 
     private void enforceSuperAdmin(AuthenticatedUser currentUser) {
