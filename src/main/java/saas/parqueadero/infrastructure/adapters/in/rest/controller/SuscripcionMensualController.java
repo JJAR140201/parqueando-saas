@@ -73,6 +73,18 @@ public class SuscripcionMensualController {
         return ResponseEntity.ok(suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa));
     }
 
+    @GetMapping("/proximas-a-vencer")
+    @Operation(summary = "Mensualidades activas que vencen pronto (aviso para el administrador)", responses = {
+        @ApiResponse(responseCode = "200", description = "Lista de mensualidades proximas a vencer")
+    })
+    public ResponseEntity<List<SuscripcionMensualResponse>> listProximasAVencer(
+        @RequestParam(required = false) Long empresaId,
+        @RequestParam(required = false) Long sedeId
+    ) {
+        log.info("[SuscripcionMensualController] Listar proximas a vencer empresaId={} sedeId={}", empresaId, sedeId);
+        return ResponseEntity.ok(suscripcionMensualUseCase.listProximasAVencer(empresaId, sedeId));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Cancelar suscripcion mensual", responses = {
         @ApiResponse(responseCode = "204", description = "Suscripcion cancelada"),

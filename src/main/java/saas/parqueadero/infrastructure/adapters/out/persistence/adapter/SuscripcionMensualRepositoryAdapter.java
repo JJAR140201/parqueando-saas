@@ -88,4 +88,12 @@ public class SuscripcionMensualRepositoryAdapter implements SuscripcionMensualRe
             .map(mapper::toDomain)
             .collect(Collectors.toList());
     }
+
+    @Override
+    public List<SuscripcionMensual> findActivasVencidas(LocalDate hoy) {
+        return suscripcionMensualJpaRepository.findByActivaTrueAndFechaFinBefore(hoy)
+            .stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
+    }
 }
