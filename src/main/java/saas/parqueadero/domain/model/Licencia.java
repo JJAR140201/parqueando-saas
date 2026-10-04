@@ -20,6 +20,7 @@ public class Licencia {
     private LocalDateTime fechaRedencion;
     private LocalDateTime fechaRevocacion;
     private String nota;
+    private Boolean prueba;
     private Long empresaId;
     private Long emitidaPorUsuarioId;
     private Long version;

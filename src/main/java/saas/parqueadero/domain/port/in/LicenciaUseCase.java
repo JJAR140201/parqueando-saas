@@ -4,6 +4,7 @@ import java.util.List;
 import saas.parqueadero.application.dto.IssueLicenciaRequest;
 import saas.parqueadero.application.dto.LicenciaIssuedResponse;
 import saas.parqueadero.application.dto.LicenciaRedemptionRequest;
+import saas.parqueadero.application.dto.LicenciaRenewalRequest;
 import saas.parqueadero.application.dto.LicenciaSummaryResponse;
 import saas.parqueadero.application.dto.LicenciaValidationResponse;
 import saas.parqueadero.application.dto.LoginResponse;
@@ -19,4 +20,6 @@ public interface LicenciaUseCase {
     LicenciaValidationResponse validate(ValidateLicenciaRequest request);
 
     LoginResponse redeem(LicenciaRedemptionRequest request);
+
+    LoginResponse renew(LicenciaRenewalRequest request);
 }

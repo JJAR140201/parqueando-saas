@@ -2,6 +2,7 @@ package saas.parqueadero.application.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import saas.parqueadero.application.dto.CreateEmpresaResponse;
@@ -17,6 +19,7 @@ import saas.parqueadero.application.dto.IssueLicenciaRequest;
 import saas.parqueadero.application.dto.LicenciaAdminRequest;
 import saas.parqueadero.application.dto.LicenciaIssuedResponse;
 import saas.parqueadero.application.dto.LicenciaRedemptionRequest;
+import saas.parqueadero.application.dto.LicenciaRenewalRequest;
 import saas.parqueadero.application.dto.LicenciaSummaryResponse;
 import saas.parqueadero.application.dto.LicenciaValidationResponse;
 import saas.parqueadero.application.dto.LoginResponse;
@@ -45,6 +48,10 @@ import saas.parqueadero.licensing.LicenseSerialPayload;
 public class LicenciaService implements LicenciaUseCase {
 
     private static final int DURACION_DIAS_DEFAULT = 365;
+    /** Dias de uso de una licencia de prueba, contados desde su activacion. */
+    static final int DURACION_PRUEBA_DIAS = 2;
+    /** Plazo para activar el codigo de una licencia de prueba antes de que caduque sin usar. */
+    static final int PLAZO_ACTIVACION_PRUEBA_DIAS = 7;
 
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
     private final LicenciaRepositoryPort licenciaRepositoryPort;
@@ -53,6 +60,7 @@ public class LicenciaService implements LicenciaUseCase {
     private final TenantProvisioningService tenantProvisioningService;
     private final TokenIssuanceService tokenIssuanceService;
     private final LicenseSerialCodec licenseSerialCodec;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -60,7 +68,12 @@ public class LicenciaService implements LicenciaUseCase {
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
         enforceSuperAdmin(currentUser);
 
-        int dias = request.getDuracionDias() != null ? request.getDuracionDias() : DURACION_DIAS_DEFAULT;
+        boolean prueba = Boolean.TRUE.equals(request.getPrueba());
+        // En una prueba, la expiracion del codigo es solo el plazo para activarlo; al canjearlo
+        // se recalcula para que los dias de prueba corran desde la activacion.
+        int dias = prueba
+            ? PLAZO_ACTIVACION_PRUEBA_DIAS
+            : (request.getDuracionDias() != null ? request.getDuracionDias() : DURACION_DIAS_DEFAULT);
         LocalDate fechaExpiracion = LocalDate.now().plusDays(dias);
         String codigoLegible = licenseSerialCodec.generate(fechaExpiracion);
 
@@ -70,6 +83,7 @@ public class LicenciaService implements LicenciaUseCase {
             .fechaExpiracion(fechaExpiracion)
             .fechaEmision(LocalDateTime.now())
             .nota(request.getNota())
+            .prueba(prueba)
             .emitidaPorUsuarioId(currentUser.getUsuarioId())
             .build());
 
@@ -83,6 +97,7 @@ public class LicenciaService implements LicenciaUseCase {
             .fechaEmision(creada.getFechaEmision())
             .fechaExpiracion(creada.getFechaExpiracion())
             .nota(creada.getNota())
+            .prueba(prueba)
             .build();
     }
 
@@ -146,24 +161,7 @@ public class LicenciaService implements LicenciaUseCase {
     public LoginResponse redeem(LicenciaRedemptionRequest request) {
         String normalizado = normalizar(request.getCodigo());
 
-        try {
-            licenseSerialCodec.verify(normalizado);
-        } catch (LicenseSerialInvalidException ex) {
-            throw new BusinessException("El codigo de licencia no es valido");
-        }
-
-        Licencia licencia = licenciaRepositoryPort.findByCodigo(normalizado)
-            .orElseThrow(() -> new BusinessException("El codigo de licencia no existe"));
-
-        if (licencia.getEstado() == EstadoLicencia.REVOCADA) {
-            throw new BusinessException("Este codigo de licencia fue revocado");
-        }
-        if (licencia.getEstado() == EstadoLicencia.REDIMIDA) {
-            throw new BusinessException("Este codigo de licencia ya fue utilizado");
-        }
-        if (licencia.getFechaExpiracion().isBefore(LocalDate.now())) {
-            throw new BusinessException("Este codigo de licencia esta vencido");
-        }
+        Licencia licencia = cargarLicenciaCanjeable(normalizado);
 
         LicenciaAdminRequest adminRequest = request.getAdmin();
 
@@ -181,6 +179,9 @@ public class LicenciaService implements LicenciaUseCase {
         licencia.setEstado(EstadoLicencia.REDIMIDA);
         licencia.setEmpresaId(empresaCreada.getEmpresaId());
         licencia.setFechaRedencion(LocalDateTime.now());
+        if (Boolean.TRUE.equals(licencia.getPrueba())) {
+            licencia.setFechaExpiracion(LocalDate.now().plusDays(DURACION_PRUEBA_DIAS));
+        }
 
         try {
             licenciaRepositoryPort.save(licencia);
@@ -195,6 +196,82 @@ public class LicenciaService implements LicenciaUseCase {
             .orElseThrow(() -> new ResourceNotFoundException("Usuario administrador no encontrado"));
 
         return tokenIssuanceService.buildLoginResponse(usuarioCompleto);
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse renew(LicenciaRenewalRequest request) {
+        Licencia nueva = cargarLicenciaCanjeable(normalizar(request.getCodigo()));
+        if (Boolean.TRUE.equals(nueva.getPrueba())) {
+            throw new BusinessException("Un codigo de prueba no puede usarse para renovar una licencia");
+        }
+
+        Usuario admin = usuarioRepositoryPort.findByUsername(request.getUsername().trim())
+            .filter(usuario -> passwordEncoder.matches(request.getPassword(), usuario.getPassword()))
+            .orElseThrow(() -> new BusinessException("Credenciales invalidas"));
+        if (admin.getRol() != RolUsuario.ADMIN || admin.getEmpresaId() == null) {
+            throw new BusinessException("Solo el ADMIN de una empresa puede renovar su licencia");
+        }
+
+        List<Licencia> existentes = licenciaRepositoryPort.findAllByEmpresaId(admin.getEmpresaId());
+        if (!existentes.isEmpty() && existentes.stream().allMatch(l -> l.getEstado() == EstadoLicencia.REVOCADA)) {
+            throw new BusinessException("La licencia de tu empresa fue revocada. Contacta al proveedor.");
+        }
+
+        // Se suma a lo que le quede de licencia vigente (si ya vencio, cuenta desde hoy).
+        LocalDate hoy = LocalDate.now();
+        LocalDate base = existentes.stream()
+            .filter(l -> l.getEstado() != EstadoLicencia.REVOCADA)
+            .map(Licencia::getFechaExpiracion)
+            .filter(fecha -> fecha.isAfter(hoy))
+            .max(LocalDate::compareTo)
+            .orElse(hoy);
+
+        nueva.setFechaExpiracion(base.plusDays(duracionEnDias(nueva)));
+        nueva.setEstado(EstadoLicencia.REDIMIDA);
+        nueva.setEmpresaId(admin.getEmpresaId());
+        nueva.setFechaRedencion(LocalDateTime.now());
+        try {
+            licenciaRepositoryPort.save(nueva);
+        } catch (OptimisticLockingFailureException ex) {
+            throw new BusinessException("Este codigo de licencia ya fue utilizado");
+        }
+
+        log.info("[LicenciaService] Licencia renovada id={} empresaId={} nuevaExpiracion={}",
+            nueva.getId(), admin.getEmpresaId(), nueva.getFechaExpiracion());
+
+        return tokenIssuanceService.buildLoginResponse(admin);
+    }
+
+    /** Verifica firma y estado de un codigo que se va a canjear (alta de empresa o renovacion). */
+    private Licencia cargarLicenciaCanjeable(String codigoNormalizado) {
+        try {
+            licenseSerialCodec.verify(codigoNormalizado);
+        } catch (LicenseSerialInvalidException ex) {
+            throw new BusinessException("El codigo de licencia no es valido");
+        }
+
+        Licencia licencia = licenciaRepositoryPort.findByCodigo(codigoNormalizado)
+            .orElseThrow(() -> new BusinessException("El codigo de licencia no existe"));
+
+        if (licencia.getEstado() == EstadoLicencia.REVOCADA) {
+            throw new BusinessException("Este codigo de licencia fue revocado");
+        }
+        if (licencia.getEstado() == EstadoLicencia.REDIMIDA) {
+            throw new BusinessException("Este codigo de licencia ya fue utilizado");
+        }
+        if (licencia.getFechaExpiracion().isBefore(LocalDate.now())) {
+            throw new BusinessException("Este codigo de licencia esta vencido");
+        }
+        return licencia;
+    }
+
+    /** Dias de uso que otorga el codigo: los de la prueba o los que separan emision y expiracion. */
+    private long duracionEnDias(Licencia licencia) {
+        if (Boolean.TRUE.equals(licencia.getPrueba())) {
+            return DURACION_PRUEBA_DIAS;
+        }
+        return ChronoUnit.DAYS.between(licencia.getFechaEmision().toLocalDate(), licencia.getFechaExpiracion());
     }
 
     private LicenciaValidationResponse evaluarEstado(Licencia licencia, LicenseSerialPayload payload) {
@@ -236,6 +313,7 @@ public class LicenciaService implements LicenciaUseCase {
             .empresaId(licencia.getEmpresaId())
             .empresaNombre(licencia.getEmpresaId() == null ? null : nombresPorEmpresa.get(licencia.getEmpresaId()))
             .nota(licencia.getNota())
+            .prueba(Boolean.TRUE.equals(licencia.getPrueba()))
             .build();
     }
 

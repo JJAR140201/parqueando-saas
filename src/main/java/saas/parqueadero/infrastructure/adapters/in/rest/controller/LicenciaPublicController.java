@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import saas.parqueadero.application.dto.LicenciaRedemptionRequest;
+import saas.parqueadero.application.dto.LicenciaRenewalRequest;
 import saas.parqueadero.application.dto.LicenciaValidationResponse;
 import saas.parqueadero.application.dto.LoginResponse;
 import saas.parqueadero.application.dto.ValidateLicenciaRequest;
@@ -49,5 +50,15 @@ public class LicenciaPublicController {
     public ResponseEntity<LoginResponse> redeem(@Valid @RequestBody LicenciaRedemptionRequest request) {
         log.info("[LicenciaPublicController] Canjear licencia");
         return ResponseEntity.status(HttpStatus.CREATED).body(licenciaUseCase.redeem(request));
+    }
+
+    @PostMapping("/renovar")
+    @Operation(summary = "Renovar la licencia de una empresa existente con un nuevo codigo", responses = {
+        @ApiResponse(responseCode = "200", description = "Licencia renovada, sesion iniciada"),
+        @ApiResponse(responseCode = "400", description = "Codigo o credenciales invalidos")
+    })
+    public ResponseEntity<LoginResponse> renew(@Valid @RequestBody LicenciaRenewalRequest request) {
+        log.info("[LicenciaPublicController] Renovar licencia username={}", request.getUsername());
+        return ResponseEntity.ok(licenciaUseCase.renew(request));
     }
 }

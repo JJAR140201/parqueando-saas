@@ -22,4 +22,5 @@ public class LicenciaSummaryResponse {
     private Long empresaId;
     private String empresaNombre;
     private String nota;
+    private boolean prueba;
 }

@@ -49,6 +49,8 @@ public class LicenciaJpaEntity {
     @Column(length = 500)
     private String nota;
 
+    private Boolean prueba;
+
     private Long empresaId;
 
     private Long emitidaPorUsuarioId;
