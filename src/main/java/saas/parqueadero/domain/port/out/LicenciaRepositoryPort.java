@@ -9,7 +9,7 @@ public interface LicenciaRepositoryPort {
 
     Optional<Licencia> findByCodigo(String codigoNormalizado);
 
-    Optional<Licencia> findByEmpresaId(Long empresaId);
+    List<Licencia> findAllByEmpresaId(Long empresaId);
 
     List<Licencia> findAll();
 

@@ -13,21 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import saas.parqueadero.domain.model.SuscripcionMensual;
-import saas.parqueadero.domain.port.out.EmpresaRepositoryPort;
-import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 
 @ExtendWith(MockitoExtension.class)
 class MensualidadVencimientoNotificationServiceTest {
 
     @Mock SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
-    @Mock SedeRepositoryPort sedeRepositoryPort;
-    @Mock EmpresaRepositoryPort empresaRepositoryPort;
-    @Mock TwilioService twilioService;
 
     private MensualidadVencimientoNotificationService service() {
-        return new MensualidadVencimientoNotificationService(
-            suscripcionMensualRepositoryPort, sedeRepositoryPort, empresaRepositoryPort, twilioService);
+        return new MensualidadVencimientoNotificationService(suscripcionMensualRepositoryPort);
     }
 
     @Test

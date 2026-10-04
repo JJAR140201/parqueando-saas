@@ -15,6 +15,9 @@ public class IssueLicenciaRequest {
     @Min(1)
     private Integer duracionDias;
 
+    /** Licencia de prueba: dura {@code DURACION_PRUEBA_DIAS} dias contados desde que el cliente la activa. */
+    private Boolean prueba;
+
     @Size(max = 500)
     private String nota;
 }
