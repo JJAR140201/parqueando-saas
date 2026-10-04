@@ -8,7 +8,7 @@ import saas.parqueadero.infrastructure.adapters.out.persistence.entity.LicenciaJ
 public interface LicenciaJpaRepository extends JpaRepository<LicenciaJpaEntity, Long> {
     Optional<LicenciaJpaEntity> findByCodigo(String codigo);
 
-    Optional<LicenciaJpaEntity> findByEmpresaId(Long empresaId);
+    List<LicenciaJpaEntity> findAllByEmpresaId(Long empresaId);
 
     List<LicenciaJpaEntity> findAllByOrderByFechaEmisionDesc();
 }

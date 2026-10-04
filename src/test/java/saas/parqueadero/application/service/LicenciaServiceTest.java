@@ -22,6 +22,7 @@ import saas.parqueadero.application.dto.IssueLicenciaRequest;
 import saas.parqueadero.application.dto.LicenciaAdminRequest;
 import saas.parqueadero.application.dto.LicenciaIssuedResponse;
 import saas.parqueadero.application.dto.LicenciaRedemptionRequest;
+import saas.parqueadero.application.dto.LicenciaRenewalRequest;
 import saas.parqueadero.application.dto.LoginResponse;
 import saas.parqueadero.application.dto.RegisterUserResponse;
 import saas.parqueadero.application.dto.SedeSummaryResponse;
@@ -45,6 +46,7 @@ class LicenciaServiceTest {
     @Mock UsuarioRepositoryPort usuarioRepository;
     @Mock TenantProvisioningService tenantProvisioningService;
     @Mock TokenIssuanceService tokenIssuanceService;
+    @Mock org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private LicenseSerialCodec codec;
     private LicenciaService service;
@@ -53,7 +55,7 @@ class LicenciaServiceTest {
     void setUp() {
         codec = new LicenseSerialCodec(Base64.getDecoder().decode("Q0hBTkdFX1RISVNfTElDRU5TRV9TRUNSRVRfMzJCIQ=="));
         service = new LicenciaService(userProvider, licenciaRepository, empresaRepository, usuarioRepository,
-            tenantProvisioningService, tokenIssuanceService, codec);
+            tenantProvisioningService, tokenIssuanceService, codec, passwordEncoder);
     }
 
     private void conRol(String rol) {
@@ -83,6 +85,54 @@ class LicenciaServiceTest {
         assertThat(response.getCodigo()).contains("-");
         assertThat(response.getEstado()).isEqualTo(EstadoLicencia.PENDIENTE.name());
         assertThat(response.getFechaExpiracion()).isEqualTo(LocalDate.now().plusDays(30));
+    }
+
+    @Test
+    void emiteLicenciaDePruebaConPlazoDeActivacion() {
+        conRol("SUPER_ADMIN");
+        when(licenciaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        LicenciaIssuedResponse response = service.issue(IssueLicenciaRequest.builder().prueba(true).duracionDias(365).build());
+
+        assertThat(response.isPrueba()).isTrue();
+        assertThat(response.getFechaExpiracion())
+            .isEqualTo(LocalDate.now().plusDays(LicenciaService.PLAZO_ACTIVACION_PRUEBA_DIAS));
+    }
+
+    @Test
+    void redimirPruebaCuentaLosDiasDesdeLaActivacion() {
+        String codigo = codec.generate(LocalDate.now().plusDays(5));
+        Licencia licencia = Licencia.builder()
+            .id(1L)
+            .codigo(codigo.replaceAll("[\\s-]", ""))
+            .estado(EstadoLicencia.PENDIENTE)
+            .prueba(true)
+            .fechaExpiracion(LocalDate.now().plusDays(5))
+            .fechaEmision(LocalDateTime.now())
+            .build();
+
+        when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(licencia));
+        when(tenantProvisioningService.createEmpresaWithSedes(any())).thenReturn(CreateEmpresaResponse.builder()
+            .empresaId(5L).nit("900").nombre("Cliente")
+            .sedes(List.of(SedeSummaryResponse.builder().id(50L).nombre("Principal").capacidadTotal(10).capacidadActual(10).build()))
+            .build());
+        when(tenantProvisioningService.createUserForEmpresa(any())).thenReturn(RegisterUserResponse.builder()
+            .usuarioId(100L).username("admin.cliente").rol("ADMIN").empresaId(5L).sedeId(50L).build());
+        when(usuarioRepository.findById(100L)).thenReturn(Optional.of(saas.parqueadero.domain.model.Usuario.builder()
+            .id(100L).username("admin.cliente").rol(saas.parqueadero.domain.model.RolUsuario.ADMIN).empresaId(5L).sedeId(50L).build()));
+        when(tokenIssuanceService.buildLoginResponse(any())).thenReturn(LoginResponse.builder()
+            .accessToken("token").refreshToken("refresh").usuarioId(100L).build());
+
+        service.redeem(LicenciaRedemptionRequest.builder()
+            .codigo(codigo)
+            .empresa(CreateEmpresaRequest.builder().nit("900").nombre("Cliente")
+                .sedes(List.of(CreateEmpresaSedeRequest.builder().nombre("Principal").capacidadTotal(10).build()))
+                .build())
+            .admin(LicenciaAdminRequest.builder().username("admin.cliente").password("secret123").build())
+            .build());
+
+        assertThat(licencia.getFechaExpiracion())
+            .isEqualTo(LocalDate.now().plusDays(LicenciaService.DURACION_PRUEBA_DIAS));
     }
 
     @Test
@@ -188,5 +238,80 @@ class LicenciaServiceTest {
             .build();
 
         assertThatThrownBy(() -> service.redeem(request)).isInstanceOf(BusinessException.class);
+    }
+
+    private Licencia licenciaPendiente(String codigo, boolean prueba, int dias) {
+        return Licencia.builder()
+            .id(2L)
+            .codigo(codigo.replaceAll("[\\s-]", ""))
+            .estado(EstadoLicencia.PENDIENTE)
+            .prueba(prueba)
+            .fechaEmision(LocalDateTime.now())
+            .fechaExpiracion(LocalDate.now().plusDays(dias))
+            .build();
+    }
+
+    private saas.parqueadero.domain.model.Usuario adminDeEmpresa() {
+        return saas.parqueadero.domain.model.Usuario.builder()
+            .id(100L).username("admin.cliente").password("hash")
+            .rol(saas.parqueadero.domain.model.RolUsuario.ADMIN).empresaId(5L).sedeId(50L).build();
+    }
+
+    private void renovarCon(String codigo, Licencia nueva, Licencia existente) {
+        when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(nueva));
+        when(usuarioRepository.findByUsername("admin.cliente")).thenReturn(Optional.of(adminDeEmpresa()));
+        when(passwordEncoder.matches("secret123", "hash")).thenReturn(true);
+        when(licenciaRepository.findAllByEmpresaId(5L)).thenReturn(List.of(existente));
+        when(tokenIssuanceService.buildLoginResponse(any())).thenReturn(LoginResponse.builder().accessToken("token").build());
+
+        service.renew(LicenciaRenewalRequest.builder().codigo(codigo).username("admin.cliente").password("secret123").build());
+    }
+
+    @Test
+    void renovarExtiendeDesdeHoySiLaLicenciaYaVencio() {
+        String codigo = codec.generate(LocalDate.now().plusDays(365));
+        Licencia nueva = licenciaPendiente(codigo, false, 365);
+        Licencia vencida = Licencia.builder().id(1L).empresaId(5L).estado(EstadoLicencia.REDIMIDA)
+            .fechaExpiracion(LocalDate.now().minusDays(3)).build();
+
+        renovarCon(codigo, nueva, vencida);
+
+        assertThat(nueva.getEstado()).isEqualTo(EstadoLicencia.REDIMIDA);
+        assertThat(nueva.getEmpresaId()).isEqualTo(5L);
+        assertThat(nueva.getFechaExpiracion()).isEqualTo(LocalDate.now().plusDays(365));
+    }
+
+    @Test
+    void renovarSumaAlTiempoRestanteDeLaLicenciaVigente() {
+        String codigo = codec.generate(LocalDate.now().plusDays(365));
+        Licencia nueva = licenciaPendiente(codigo, false, 365);
+        Licencia vigente = Licencia.builder().id(1L).empresaId(5L).estado(EstadoLicencia.REDIMIDA)
+            .fechaExpiracion(LocalDate.now().plusDays(10)).build();
+
+        renovarCon(codigo, nueva, vigente);
+
+        assertThat(nueva.getFechaExpiracion()).isEqualTo(LocalDate.now().plusDays(375));
+    }
+
+    @Test
+    void renovarConCodigoDePruebaFalla() {
+        String codigo = codec.generate(LocalDate.now().plusDays(7));
+        when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(licenciaPendiente(codigo, true, 7)));
+
+        assertThatThrownBy(() -> service.renew(
+            LicenciaRenewalRequest.builder().codigo(codigo).username("admin.cliente").password("x").build()))
+            .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void renovarConPasswordIncorrectoFalla() {
+        String codigo = codec.generate(LocalDate.now().plusDays(365));
+        when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(licenciaPendiente(codigo, false, 365)));
+        when(usuarioRepository.findByUsername("admin.cliente")).thenReturn(Optional.of(adminDeEmpresa()));
+        when(passwordEncoder.matches("mala", "hash")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.renew(
+            LicenciaRenewalRequest.builder().codigo(codigo).username("admin.cliente").password("mala").build()))
+            .isInstanceOf(BusinessException.class);
     }
 }
