@@ -18,4 +18,5 @@ public class LicenciaIssuedResponse {
     private LocalDateTime fechaEmision;
     private LocalDate fechaExpiracion;
     private String nota;
+    private boolean prueba;
 }

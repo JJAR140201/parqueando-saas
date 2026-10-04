@@ -44,7 +44,8 @@ public class SecurityConfig {
                                 "/api/v1/sync/**",
                                 // Activacion publica de licencias: el cliente aun no tiene usuario/JWT
                                 "/api/v1/licencias/validar",
-                                "/api/v1/licencias/redimir"
+                                "/api/v1/licencias/redimir",
+                                "/api/v1/licencias/renovar"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

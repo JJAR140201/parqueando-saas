@@ -2,6 +2,8 @@ package saas.parqueadero.application.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -112,14 +114,20 @@ public class AuthService implements AuthUseCase {
             return;
         }
 
-        licenciaRepositoryPort.findByEmpresaId(usuario.getEmpresaId()).ifPresent(licencia -> {
-            if (licencia.getEstado() == EstadoLicencia.REVOCADA) {
-                throw new LicenciaInvalidaException("La licencia de tu empresa fue revocada. Contacta al proveedor.");
-            }
-            if (licencia.getFechaExpiracion().isBefore(LocalDate.now())) {
-                throw new LicenciaInvalidaException("La licencia de tu empresa esta vencida. Contacta al proveedor para renovarla.");
-            }
-        });
+        List<Licencia> licencias = licenciaRepositoryPort.findAllByEmpresaId(usuario.getEmpresaId());
+        if (licencias.isEmpty()) {
+            return;
+        }
+
+        // Una empresa puede acumular varias licencias (la inicial y sus renovaciones): rige la vigente mas tardia.
+        Licencia vigente = licencias.stream()
+            .filter(licencia -> licencia.getEstado() != EstadoLicencia.REVOCADA)
+            .max(Comparator.comparing(Licencia::getFechaExpiracion))
+            .orElseThrow(() -> new LicenciaInvalidaException("La licencia de tu empresa fue revocada. Contacta al proveedor."));
+
+        if (vigente.getFechaExpiracion().isBefore(LocalDate.now())) {
+            throw new LicenciaInvalidaException("La licencia de tu empresa esta vencida. Renuevala con un nuevo codigo.");
+        }
     }
 
     private boolean isPasswordValid(String rawPassword, String storedPassword) {

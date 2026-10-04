@@ -30,9 +30,10 @@ public class LicenciaRepositoryAdapter implements LicenciaRepositoryPort {
     }
 
     @Override
-    public Optional<Licencia> findByEmpresaId(Long empresaId) {
-        return licenciaJpaRepository.findByEmpresaId(empresaId)
-            .map(mapper::toDomain);
+    public List<Licencia> findAllByEmpresaId(Long empresaId) {
+        return licenciaJpaRepository.findAllByEmpresaId(empresaId).stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
     }
 
     @Override
