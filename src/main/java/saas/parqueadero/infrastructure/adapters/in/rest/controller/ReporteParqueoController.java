@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import saas.parqueadero.application.dto.ReportePaginaResponse;
 import saas.parqueadero.application.dto.ReporteRegistroResponse;
 import saas.parqueadero.application.dto.ResumenDiaResponse;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
@@ -59,9 +60,16 @@ public class ReporteParqueoController {
         @RequestParam(required = false) Long sedeId,
         @RequestParam(required = false) EstadoRegistroParqueo estado,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "1000") int size
     ) {
-        return ResponseEntity.ok(reporteParqueoUseCase.getReporte(empresaId, sedeId, estado, desde, hasta));
+        ReportePaginaResponse resultado = reporteParqueoUseCase.getReportePagina(empresaId, sedeId, estado, desde, hasta, page, size);
+        return ResponseEntity.ok()
+            .header("X-Total-Count", String.valueOf(resultado.total()))
+            .header("X-Page", String.valueOf(page))
+            .header("X-Size", String.valueOf(size))
+            .body(resultado.items());
     }
 
     @GetMapping("/resumen-dia")
@@ -80,7 +88,7 @@ public class ReporteParqueoController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
     ) throws IOException {
-        List<ReporteRegistroResponse> registros = reporteParqueoUseCase.getReporte(empresaId, sedeId, estado, desde, hasta);
+        List<ReporteRegistroResponse> registros = reporteParqueoUseCase.getReporteParaExportar(empresaId, sedeId, estado, desde, hasta);
         byte[] bytes = buildExcel(registros);
 
         HttpHeaders headers = new HttpHeaders();
@@ -97,7 +105,7 @@ public class ReporteParqueoController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
     ) {
-        List<ReporteRegistroResponse> registros = reporteParqueoUseCase.getReporte(empresaId, sedeId, estado, desde, hasta);
+        List<ReporteRegistroResponse> registros = reporteParqueoUseCase.getReporteParaExportar(empresaId, sedeId, estado, desde, hasta);
         byte[] bytes = buildPdf(registros);
 
         HttpHeaders headers = new HttpHeaders();
