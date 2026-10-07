@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, qa, prod]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: parqueadero
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Secretos solo para pruebas: no son los de ningun entorno real
+      APP_JWT_SECRET: ci-only-jwt-secret-with-more-than-32-characters
+      LICENSE_HMAC_SECRET: Y2ktb25seS1saWNlbnNlLXNlY3JldC0zMi1ieXRlcyEh
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/parqueadero
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+      - name: Compilar y probar
+        run: ./mvnw -B verify
