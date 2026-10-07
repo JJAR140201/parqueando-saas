@@ -10,6 +10,8 @@ public interface UsuarioJpaRepository extends JpaRepository<UsuarioJpaEntity, Lo
 
     Optional<UsuarioJpaEntity> findByUsername(String username);
 
+    List<UsuarioJpaEntity> findAllByUsername(String username);
+
     Optional<UsuarioJpaEntity> findByUsernameAndEmpresaId(String username, Long empresaId);
 
     boolean existsBySedeIdAndEmpresaId(Long sedeId, Long empresaId);
