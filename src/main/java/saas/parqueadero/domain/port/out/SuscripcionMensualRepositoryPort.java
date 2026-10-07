@@ -25,4 +25,7 @@ public interface SuscripcionMensualRepositoryPort {
     List<SuscripcionMensual> findPendientesDeAlertaVencimiento(LocalDate desde, LocalDate hasta);
 
     List<SuscripcionMensual> findActivasVencidas(LocalDate hoy);
+
+    /** Suscripciones activas de todas las empresas cuya fecha de fin cae en [desde, hasta]. */
+    List<SuscripcionMensual> findActivasConFinEntre(LocalDate desde, LocalDate hasta);
 }

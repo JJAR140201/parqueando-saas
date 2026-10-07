@@ -111,7 +111,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+                            "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/login",
@@ -139,7 +139,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"nombre\": \"Operario Uno\",\n  \"username\": \"operario1\",\n  \"password\": \"123456\",\n  \"rol\": \"OPERARIO\",\n  \"empresaId\": 1,\n  \"sedeId\": 1\n}"
+                            "raw": "{\n  \"nombre\": \"Operario Uno\",\n  \"username\": \"operario1\",\n  \"password\": \"{{nuevo_password}}\",\n  \"rol\": \"OPERARIO\",\n  \"empresaId\": 1,\n  \"sedeId\": 1\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -638,7 +638,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"nombre\": \"Admin Empresa\",\n  \"username\": \"admin_empresa\",\n  \"password\": \"123456\",\n  \"rol\": \"ADMIN\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": {{sedeId}}\n}"
+                            "raw": "{\n  \"nombre\": \"Admin Empresa\",\n  \"username\": \"admin_empresa\",\n  \"password\": \"{{nuevo_password}}\",\n  \"rol\": \"ADMIN\",\n  \"empresaId\": {{empresaId}},\n  \"sedeId\": {{sedeId}}\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/v1/super-admin/usuarios",
