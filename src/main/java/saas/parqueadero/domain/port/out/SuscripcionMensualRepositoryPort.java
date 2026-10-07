@@ -20,6 +20,8 @@ public interface SuscripcionMensualRepositoryPort {
 
     List<SuscripcionMensual> findAll();
 
+    void deleteByEmpresaId(Long empresaId);
+
     List<SuscripcionMensual> findPendientesDeAlertaVencimiento(LocalDate desde, LocalDate hasta);
 
     List<SuscripcionMensual> findActivasVencidas(LocalDate hoy);
