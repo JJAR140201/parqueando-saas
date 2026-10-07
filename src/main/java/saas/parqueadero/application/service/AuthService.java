@@ -43,20 +43,36 @@ public class AuthService implements AuthUseCase {
     private final LicenciaRepositoryPort licenciaRepositoryPort;
     private final PasswordEncoder passwordEncoder;
     private final TokenIssuanceService tokenIssuanceService;
+    private final LoginAttemptService loginAttemptService;
+
+    /** Hash descartable para gastar el mismo tiempo de BCrypt cuando el usuario no existe. */
+    private volatile String dummyHash;
 
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
         log.info("[AuthService] Login iniciado username={}", request.getUsername());
-        Usuario usuario = usuarioRepositoryPort.findByUsername(request.getUsername().trim())
-            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        log.debug("[AuthService] Usuario encontrado id={} rol={} empresaId={} sedeId={}",
-            usuario.getId(), usuario.getRol(), usuario.getEmpresaId(), usuario.getSedeId());
+        String username = request.getUsername().trim();
+        loginAttemptService.verificarNoBloqueado(username);
 
-        if (!isPasswordValid(request.getPassword(), usuario.getPassword())) {
-            log.warn("[AuthService] Credenciales invalidas username={}", request.getUsername());
+        // El username solo es unico por empresa: se prueba la clave contra cada candidato.
+        List<Usuario> candidatos = usuarioRepositoryPort.findAllByUsername(username);
+        Usuario usuario = candidatos.stream()
+            .filter(candidato -> isPasswordValid(request.getPassword(), candidato.getPassword()))
+            .findFirst()
+            .orElse(null);
+
+        if (usuario == null) {
+            if (candidatos.isEmpty()) {
+                passwordEncoder.matches(request.getPassword(), dummyHash());
+            }
+            loginAttemptService.registrarFallo(username);
+            log.warn("[AuthService] Credenciales invalidas username={}", username);
             throw new BusinessException("Credenciales invalidas");
         }
+        loginAttemptService.registrarExito(username);
+        log.debug("[AuthService] Usuario autenticado id={} rol={} empresaId={} sedeId={}",
+            usuario.getId(), usuario.getRol(), usuario.getEmpresaId(), usuario.getSedeId());
 
         checkLicenciaActiva(usuario);
 
@@ -130,6 +146,15 @@ public class AuthService implements AuthUseCase {
         }
     }
 
+    private String dummyHash() {
+        String hash = dummyHash;
+        if (hash == null) {
+            hash = passwordEncoder.encode("dummy-password-for-timing");
+            dummyHash = hash;
+        }
+        return hash;
+    }
+
     private boolean isPasswordValid(String rawPassword, String storedPassword) {
         return passwordEncoder.matches(rawPassword, storedPassword);
     }
@@ -163,7 +188,7 @@ public class AuthService implements AuthUseCase {
                 throw new BusinessException("Un SUPER_ADMIN no debe tener empresaId ni sedeId");
             }
 
-            usuarioRepositoryPort.findByUsername(normalizedUsername)
+            usuarioRepositoryPort.findByUsernameAndEmpresaId(normalizedUsername, null)
                 .ifPresent(existing -> {
                     throw new BusinessException("Ya existe un usuario con ese username");
                 });
