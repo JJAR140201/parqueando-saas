@@ -44,7 +44,7 @@ public class SuscripcionMensualController {
         @ApiResponse(responseCode = "400", description = "Error de validacion o negocio")
     })
     public ResponseEntity<SuscripcionMensualResponse> create(@Valid @RequestBody CreateSuscripcionMensualRequest request) {
-        log.info("[SuscripcionMensualController] Crear suscripcion placa={} empresaId={} sedeId={}",
+        log.debug("[SuscripcionMensualController] Crear suscripcion placa={} empresaId={} sedeId={}",
             request.getPlaca(), request.getEmpresaId(), request.getSedeId());
         return ResponseEntity.status(HttpStatus.CREATED).body(suscripcionMensualUseCase.createSuscripcion(request));
     }
@@ -69,7 +69,7 @@ public class SuscripcionMensualController {
         @RequestParam(required = false) Long sedeId,
         @RequestParam(required = false) String placa
     ) {
-        log.info("[SuscripcionMensualController] Listar suscripciones empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
+        log.debug("[SuscripcionMensualController] Listar suscripciones empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
         return ResponseEntity.ok(suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa));
     }
 
@@ -109,7 +109,7 @@ public class SuscripcionMensualController {
         @RequestParam(required = false) Long sedeId,
         @RequestParam(required = false) String placa
     ) {
-        log.info("[SuscripcionMensualController] Exportar a Excel empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
+        log.debug("[SuscripcionMensualController] Exportar a Excel empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
         try {
             List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
             byte[] excelFile = exportSuscripcionesService.exportToExcel(suscripciones);
@@ -133,7 +133,7 @@ public class SuscripcionMensualController {
         @RequestParam(required = false) Long sedeId,
         @RequestParam(required = false) String placa
     ) {
-        log.info("[SuscripcionMensualController] Exportar a PDF empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
+        log.debug("[SuscripcionMensualController] Exportar a PDF empresaId={} sedeId={} placa={}", empresaId, sedeId, placa);
         try {
             List<SuscripcionMensualResponse> suscripciones = suscripcionMensualUseCase.listSuscripciones(empresaId, sedeId, placa);
             byte[] pdfFile = exportSuscripcionesService.exportToPdf(suscripciones);
