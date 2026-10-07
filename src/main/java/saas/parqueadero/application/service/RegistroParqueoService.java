@@ -47,7 +47,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     @Override
     @Transactional
     public RegistroParqueoResponse registrarEntrada(RegistrarEntradaRequest request) {
-        log.info("[RegistroParqueoService] Inicia entrada placa={} tipoVehiculo={}", request.getPlaca(), request.getTipoVehiculo());
+        log.debug("[RegistroParqueoService] Inicia entrada placa={} tipoVehiculo={}", request.getPlaca(), request.getTipoVehiculo());
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
         // Bloqueo de la sede: serializa entradas/salidas concurrentes (capacidad y placa unica).
@@ -78,14 +78,14 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         sedeRepositoryPort.save(sede);
 
         RegistroParqueo saved = registroParqueoRepositoryPort.save(registro);
-        log.info("[RegistroParqueoService] Entrada registrada id={} placa={} sedeId={} empresaId={}",
+        log.debug("[RegistroParqueoService] Entrada registrada id={} placa={} sedeId={} empresaId={}",
             saved.getId(), saved.getPlaca(), saved.getSedeId(), saved.getEmpresaId());
         return toResponse(saved);
     }
 
     @Override
     public PrecioSalidaResponse consultarPrecioSalida(String placa) {
-        log.info("[RegistroParqueoService] Consultar precio salida placa={}", placa);
+        log.debug("[RegistroParqueoService] Consultar precio salida placa={}", placa);
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
 
@@ -129,7 +129,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
 
     @Override
     public PrecioSalidaResponse consultarTicket(String placa) {
-        log.info("[RegistroParqueoService] Consultar ticket placa={}", placa);
+        log.debug("[RegistroParqueoService] Consultar ticket placa={}", placa);
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
 
@@ -188,7 +188,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
     @Override
     @Transactional
     public RegistroParqueoResponse registrarSalida(RegistrarSalidaRequest request) {
-        log.info("[RegistroParqueoService] Inicia salida placa={}", request.getPlaca());
+        log.debug("[RegistroParqueoService] Inicia salida placa={}", request.getPlaca());
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
         Sede sede = sedeRepositoryPort.findByIdAndEmpresaIdForUpdate(user.getSedeId(), user.getEmpresaId())
@@ -213,7 +213,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         sedeRepositoryPort.save(sede);
 
         RegistroParqueo saved = registroParqueoRepositoryPort.save(registro);
-        log.info("[RegistroParqueoService] Salida registrada id={} placa={} totalPagado={}",
+        log.debug("[RegistroParqueoService] Salida registrada id={} placa={} totalPagado={}",
             saved.getId(), saved.getPlaca(), saved.getTotalPagado());
         return toResponse(saved);
     }
