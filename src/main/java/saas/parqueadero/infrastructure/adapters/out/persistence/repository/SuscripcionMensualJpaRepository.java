@@ -44,4 +44,6 @@ public interface SuscripcionMensualJpaRepository extends JpaRepository<Suscripci
     );
 
     List<SuscripcionMensualJpaEntity> findByActivaTrueAndFechaFinBefore(LocalDate fecha);
+
+    List<SuscripcionMensualJpaEntity> findByActivaTrueAndFechaFinBetween(LocalDate desde, LocalDate hasta);
 }
