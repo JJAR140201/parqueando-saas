@@ -11,6 +11,9 @@ public interface UsuarioRepositoryPort {
 
     Optional<Usuario> findByUsername(String username);
 
+    /** El username solo es unico por empresa, asi que puede haber varios usuarios con el mismo. */
+    List<Usuario> findAllByUsername(String username);
+
     Optional<Usuario> findByUsernameAndEmpresaId(String username, Long empresaId);
 
     boolean existsBySedeIdAndEmpresaId(Long sedeId, Long empresaId);

@@ -55,7 +55,7 @@ class LicenciaServiceTest {
     void setUp() {
         codec = new LicenseSerialCodec(Base64.getDecoder().decode("Q0hBTkdFX1RISVNfTElDRU5TRV9TRUNSRVRfMzJCIQ=="));
         service = new LicenciaService(userProvider, licenciaRepository, empresaRepository, usuarioRepository,
-            tenantProvisioningService, tokenIssuanceService, codec, passwordEncoder);
+            tenantProvisioningService, tokenIssuanceService, codec, passwordEncoder, new LoginAttemptService());
     }
 
     private void conRol(String rol) {
@@ -259,7 +259,7 @@ class LicenciaServiceTest {
 
     private void renovarCon(String codigo, Licencia nueva, Licencia existente) {
         when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(nueva));
-        when(usuarioRepository.findByUsername("admin.cliente")).thenReturn(Optional.of(adminDeEmpresa()));
+        when(usuarioRepository.findAllByUsername("admin.cliente")).thenReturn(List.of(adminDeEmpresa()));
         when(passwordEncoder.matches("secret123", "hash")).thenReturn(true);
         when(licenciaRepository.findAllByEmpresaId(5L)).thenReturn(List.of(existente));
         when(tokenIssuanceService.buildLoginResponse(any())).thenReturn(LoginResponse.builder().accessToken("token").build());
@@ -307,7 +307,7 @@ class LicenciaServiceTest {
     void renovarConPasswordIncorrectoFalla() {
         String codigo = codec.generate(LocalDate.now().plusDays(365));
         when(licenciaRepository.findByCodigo(any())).thenReturn(Optional.of(licenciaPendiente(codigo, false, 365)));
-        when(usuarioRepository.findByUsername("admin.cliente")).thenReturn(Optional.of(adminDeEmpresa()));
+        when(usuarioRepository.findAllByUsername("admin.cliente")).thenReturn(List.of(adminDeEmpresa()));
         when(passwordEncoder.matches("mala", "hash")).thenReturn(false);
 
         assertThatThrownBy(() -> service.renew(
