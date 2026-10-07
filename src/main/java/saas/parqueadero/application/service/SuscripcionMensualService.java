@@ -65,7 +65,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .empresaId(scope.empresaId())
             .build());
 
-        log.info("[SuscripcionMensualService] Suscripcion creada id={} placa={} empresaId={} sedeId={}",
+        log.debug("[SuscripcionMensualService] Suscripcion creada id={} placa={} empresaId={} sedeId={}",
             created.getId(), created.getPlaca(), created.getEmpresaId(), created.getSedeId());
         return toResponse(created);
     }
@@ -111,7 +111,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .empresaId(existing.getEmpresaId())
             .build());
 
-        log.info("[SuscripcionMensualService] Suscripcion actualizada id={} placa={}", updated.getId(), updated.getPlaca());
+        log.debug("[SuscripcionMensualService] Suscripcion actualizada id={} placa={}", updated.getId(), updated.getPlaca());
         return toResponse(updated);
     }
 
@@ -181,7 +181,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
 
         List<SuscripcionMensual> candidatas;
         if (hasRole(currentUser, RolUsuario.SUPER_ADMIN) && empresaId == null && sedeId == null) {
-            candidatas = suscripcionMensualRepositoryPort.findAll();
+            candidatas = suscripcionMensualRepositoryPort.findActivasConFinEntre(hoy, limite);
         } else {
             Scope scope = resolveScope(currentUser, empresaId, sedeId);
             candidatas = suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId());

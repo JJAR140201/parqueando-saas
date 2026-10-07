@@ -43,7 +43,7 @@ public class RegistroParqueoController {
         @ApiResponse(responseCode = "404", description = "Recurso no encontrado")
     })
     public ResponseEntity<RegistroParqueoResponse> registrarEntrada(@Valid @RequestBody RegistrarEntradaRequest request) {
-        log.info("[RegistroParqueoController] Registrar entrada placa={} tipoVehiculo={}", request.getPlaca(), request.getTipoVehiculo());
+        log.debug("[RegistroParqueoController] Registrar entrada placa={} tipoVehiculo={}", request.getPlaca(), request.getTipoVehiculo());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(registroParqueoUseCase.registrarEntrada(request));
     }
@@ -55,7 +55,7 @@ public class RegistroParqueoController {
         @ApiResponse(responseCode = "404", description = "Recurso no encontrado")
     })
     public ResponseEntity<PrecioSalidaResponse> consultarPrecioSalida(@RequestParam String placa) {
-        log.info("[RegistroParqueoController] Consultar precio salida placa={}", placa);
+        log.debug("[RegistroParqueoController] Consultar precio salida placa={}", placa);
         return ResponseEntity.ok(registroParqueoUseCase.consultarPrecioSalida(placa));
     }
 
@@ -66,7 +66,7 @@ public class RegistroParqueoController {
         @ApiResponse(responseCode = "404", description = "Recurso no encontrado")
     })
     public ResponseEntity<RegistroParqueoResponse> registrarSalida(@Valid @RequestBody RegistrarSalidaRequest request) {
-        log.info("[RegistroParqueoController] Registrar salida placa={}", request.getPlaca());
+        log.debug("[RegistroParqueoController] Registrar salida placa={}", request.getPlaca());
         return ResponseEntity.ok(registroParqueoUseCase.registrarSalida(request));
     }
 
@@ -76,7 +76,7 @@ public class RegistroParqueoController {
         @ApiResponse(responseCode = "404", description = "No existe registro activo para la placa")
     })
     public ResponseEntity<byte[]> generarTicket(@RequestParam String placa) {
-        log.info("[RegistroParqueoController] Generar ticket placa={}", placa);
+        log.debug("[RegistroParqueoController] Generar ticket placa={}", placa);
         PrecioSalidaResponse precio = registroParqueoUseCase.consultarTicket(placa);
         byte[] pdf = ticketParqueoService.generarTicket(precio);
         String filename = "ticket-" + placa.toUpperCase() + ".pdf";
