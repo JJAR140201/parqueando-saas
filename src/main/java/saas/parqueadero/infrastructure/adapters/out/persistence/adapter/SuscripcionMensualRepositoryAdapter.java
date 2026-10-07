@@ -101,4 +101,12 @@ public class SuscripcionMensualRepositoryAdapter implements SuscripcionMensualRe
             .map(mapper::toDomain)
             .collect(Collectors.toList());
     }
+
+    @Override
+    public List<SuscripcionMensual> findActivasConFinEntre(LocalDate desde, LocalDate hasta) {
+        return suscripcionMensualJpaRepository.findByActivaTrueAndFechaFinBetween(desde, hasta)
+            .stream()
+            .map(mapper::toDomain)
+            .collect(Collectors.toList());
+    }
 }

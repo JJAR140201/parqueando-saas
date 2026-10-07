@@ -48,7 +48,7 @@ public class TicketParqueoService {
      * @return bytes del PDF generado
      */
     public byte[] generarTicket(PrecioSalidaResponse precio) {
-        log.info("[TicketParqueoService] Generando ticket para placa={}", precio.getPlaca());
+        log.debug("[TicketParqueoService] Generando ticket para placa={}", precio.getPlaca());
 
         Rectangle pageSize = new Rectangle(TICKET_WIDTH, TICKET_HEIGHT);
         pageSize.setBackgroundColor(Color.WHITE);
@@ -164,7 +164,7 @@ public class TicketParqueoService {
             doc.add(maneje);
 
             doc.close();
-            log.info("[TicketParqueoService] Ticket PDF generado correctamente para placa={}", precio.getPlaca());
+            log.debug("[TicketParqueoService] Ticket PDF generado correctamente para placa={}", precio.getPlaca());
             return out.toByteArray();
         } catch (DocumentException | java.io.IOException e) {
             log.error("[TicketParqueoService] Error generando ticket PDF", e);
