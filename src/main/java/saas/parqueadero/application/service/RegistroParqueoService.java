@@ -50,7 +50,8 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         log.info("[RegistroParqueoService] Inicia entrada placa={} tipoVehiculo={}", request.getPlaca(), request.getTipoVehiculo());
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
-        Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
+        // Bloqueo de la sede: serializa entradas/salidas concurrentes (capacidad y placa unica).
+        Sede sede = sedeRepositoryPort.findByIdAndEmpresaIdForUpdate(user.getSedeId(), user.getEmpresaId())
             .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
 
         if (sede.getCapacidadActual() == null || sede.getCapacidadActual() <= 0) {
@@ -190,10 +191,9 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         log.info("[RegistroParqueoService] Inicia salida placa={}", request.getPlaca());
         AuthenticatedUser user = authenticatedUserProviderPort.getCurrentUser();
         enforceOperarioRole(user);
-        RegistroParqueo registro = findRegistroActivo(request.getPlaca(), user);
-
-        Sede sede = sedeRepositoryPort.findByIdAndEmpresaId(user.getSedeId(), user.getEmpresaId())
+        Sede sede = sedeRepositoryPort.findByIdAndEmpresaIdForUpdate(user.getSedeId(), user.getEmpresaId())
             .orElseThrow(() -> new ResourceNotFoundException("No existe la sede para la empresa indicada"));
+        RegistroParqueo registro = findRegistroActivo(request.getPlaca(), user);
 
         LocalDateTime fechaSalida = LocalDateTime.now();
         boolean mensualidadActiva = hasMensualidadVigente(registro, user, fechaSalida);
