@@ -36,8 +36,10 @@ import saas.parqueadero.domain.model.Usuario;
 import saas.parqueadero.domain.port.in.SuperAdminUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
 import saas.parqueadero.domain.port.out.EmpresaRepositoryPort;
+import saas.parqueadero.domain.port.out.RefreshTokenRepositoryPort;
 import saas.parqueadero.domain.port.out.RegistroParqueoRepositoryPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
+import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 import saas.parqueadero.domain.port.out.TarifaRepositoryPort;
 import saas.parqueadero.domain.port.out.UsuarioRepositoryPort;
 
@@ -52,6 +54,8 @@ public class SuperAdminService implements SuperAdminUseCase {
     private final UsuarioRepositoryPort usuarioRepositoryPort;
     private final TarifaRepositoryPort tarifaRepositoryPort;
     private final RegistroParqueoRepositoryPort registroParqueoRepositoryPort;
+    private final SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
+    private final RefreshTokenRepositoryPort refreshTokenRepositoryPort;
     private final PasswordEncoder passwordEncoder;
     private final TenantProvisioningService tenantProvisioningService;
 
@@ -289,6 +293,9 @@ public class SuperAdminService implements SuperAdminUseCase {
         empresaRepositoryPort.findById(empresaId)
             .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
+        usuarioRepositoryPort.findByEmpresaId(empresaId)
+            .forEach(usuario -> refreshTokenRepositoryPort.deleteByUsuarioId(usuario.getId()));
+        suscripcionMensualRepositoryPort.deleteByEmpresaId(empresaId);
         registroParqueoRepositoryPort.deleteByEmpresaId(empresaId);
         tarifaRepositoryPort.deleteByEmpresaId(empresaId);
         usuarioRepositoryPort.deleteByEmpresaId(empresaId);
@@ -365,6 +372,7 @@ public class SuperAdminService implements SuperAdminUseCase {
             throw new BusinessException("No se permite eliminar un usuario SUPER_ADMIN");
         }
 
+        refreshTokenRepositoryPort.deleteByUsuarioId(userId);
         usuarioRepositoryPort.deleteById(userId);
     }
 
