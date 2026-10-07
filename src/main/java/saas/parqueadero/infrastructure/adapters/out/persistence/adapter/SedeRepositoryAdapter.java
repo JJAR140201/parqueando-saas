@@ -30,6 +30,12 @@ public class SedeRepositoryAdapter implements SedeRepositoryPort {
     }
 
     @Override
+    public Optional<Sede> findByIdAndEmpresaIdForUpdate(Long id, Long empresaId) {
+        return sedeJpaRepository.findByIdAndEmpresaIdForUpdate(id, empresaId)
+            .map(mapper::toDomain);
+    }
+
+    @Override
     public Sede save(Sede sede) {
         return mapper.toDomain(sedeJpaRepository.save(mapper.toEntity(sede)));
     }

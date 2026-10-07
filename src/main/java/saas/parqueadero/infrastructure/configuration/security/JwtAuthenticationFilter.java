@@ -19,6 +19,7 @@ import saas.parqueadero.domain.model.AuthenticatedUser;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final ActiveUserChecker activeUserChecker;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -27,7 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtTokenProvider.isValid(token)) {
+            if (jwtTokenProvider.isValid(token) && activeUserChecker.isActive(jwtTokenProvider.getUsuarioId(token))) {
                 String username = jwtTokenProvider.getUsername(token);
                 String nombre = jwtTokenProvider.getNombre(token);
                 Long usuarioId = jwtTokenProvider.getUsuarioId(token);
