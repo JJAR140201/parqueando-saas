@@ -58,7 +58,7 @@ public class RegistroParqueoService implements RegistroParqueoUseCase {
         }
 
         registroParqueoRepositoryPort
-            .findActivoByPlaca(request.getPlaca())
+            .findActivoByPlacaAndSedeIdAndEmpresaId(request.getPlaca(), user.getSedeId(), user.getEmpresaId())
             .ifPresent(existing -> {
                 throw new BusinessException("Ya existe un registro activo para esta placa. Debe registrar la salida antes de volver a ingresar");
             });
