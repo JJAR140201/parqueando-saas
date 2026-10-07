@@ -30,4 +30,9 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepositoryPort
     public void revokeAllActiveByUsuarioId(Long usuarioId) {
         refreshTokenJpaRepository.revokeAllActiveByUsuarioId(usuarioId);
     }
+
+    @Override
+    public void deleteByUsuarioId(Long usuarioId) {
+        refreshTokenJpaRepository.deleteByUsuarioId(usuarioId);
+    }
 }

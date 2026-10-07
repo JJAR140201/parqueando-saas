@@ -9,6 +9,9 @@ public interface SedeRepositoryPort {
 
     Optional<Sede> findByIdAndEmpresaId(Long id, Long empresaId);
 
+    /** Igual que {@link #findByIdAndEmpresaId} pero toma un bloqueo de escritura (SELECT ... FOR UPDATE) hasta el fin de la transaccion. */
+    Optional<Sede> findByIdAndEmpresaIdForUpdate(Long id, Long empresaId);
+
     Sede save(Sede sede);
 
     void deleteByIdAndEmpresaId(Long id, Long empresaId);
