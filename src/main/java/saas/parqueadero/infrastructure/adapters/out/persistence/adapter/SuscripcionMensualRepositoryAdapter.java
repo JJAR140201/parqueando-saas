@@ -73,6 +73,11 @@ public class SuscripcionMensualRepositoryAdapter implements SuscripcionMensualRe
     }
 
     @Override
+    public void deleteByEmpresaId(Long empresaId) {
+        suscripcionMensualJpaRepository.deleteByEmpresaId(empresaId);
+    }
+
+    @Override
     public List<SuscripcionMensual> findAll() {
         return suscripcionMensualJpaRepository.findAll()
             .stream()

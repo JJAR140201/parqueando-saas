@@ -36,6 +36,8 @@ public interface SuscripcionMensualJpaRepository extends JpaRepository<Suscripci
 
     List<SuscripcionMensualJpaEntity> findAll();
 
+    void deleteByEmpresaId(Long empresaId);
+
     List<SuscripcionMensualJpaEntity> findByActivaTrueAndAlertaVencimientoEnviadaFalseAndFechaFinBetween(
         LocalDate desde,
         LocalDate hasta
