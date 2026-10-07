@@ -61,6 +61,7 @@ public class LicenciaService implements LicenciaUseCase {
     private final TokenIssuanceService tokenIssuanceService;
     private final LicenseSerialCodec licenseSerialCodec;
     private final PasswordEncoder passwordEncoder;
+    private final LoginAttemptService loginAttemptService;
 
     @Override
     @Transactional
@@ -206,9 +207,16 @@ public class LicenciaService implements LicenciaUseCase {
             throw new BusinessException("Un codigo de prueba no puede usarse para renovar una licencia");
         }
 
-        Usuario admin = usuarioRepositoryPort.findByUsername(request.getUsername().trim())
+        String username = request.getUsername().trim();
+        loginAttemptService.verificarNoBloqueado(username);
+        Usuario admin = usuarioRepositoryPort.findAllByUsername(username).stream()
             .filter(usuario -> passwordEncoder.matches(request.getPassword(), usuario.getPassword()))
-            .orElseThrow(() -> new BusinessException("Credenciales invalidas"));
+            .findFirst()
+            .orElseGet(() -> {
+                loginAttemptService.registrarFallo(username);
+                throw new BusinessException("Credenciales invalidas");
+            });
+        loginAttemptService.registrarExito(username);
         if (admin.getRol() != RolUsuario.ADMIN || admin.getEmpresaId() == null) {
             throw new BusinessException("Solo el ADMIN de una empresa puede renovar su licencia");
         }

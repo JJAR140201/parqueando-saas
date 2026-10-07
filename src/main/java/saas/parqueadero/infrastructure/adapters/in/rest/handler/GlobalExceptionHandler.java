@@ -15,6 +15,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import saas.parqueadero.domain.exception.BusinessException;
 import saas.parqueadero.domain.exception.LicenciaInvalidaException;
 import saas.parqueadero.domain.exception.ResourceNotFoundException;
+import saas.parqueadero.domain.exception.TooManyRequestsException;
 import saas.parqueadero.domain.exception.UnauthorizedException;
 
 @RestControllerAdvice
@@ -33,6 +34,13 @@ public class GlobalExceptionHandler {
         log.warn("[GlobalExceptionHandler] UNAUTHORIZED: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(build("UNAUTHORIZED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        log.warn("[GlobalExceptionHandler] TOO_MANY_REQUESTS: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(build("TOO_MANY_REQUESTS", ex.getMessage()));
     }
 
     @ExceptionHandler(LicenciaInvalidaException.class)

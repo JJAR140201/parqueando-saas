@@ -323,6 +323,10 @@ public class SuperAdminService implements SuperAdminUseCase {
                 throw new BusinessException("Ya existe otro usuario con ese username en la empresa");
             });
 
+        if (request.getPassword() != null && !request.getPassword().isBlank()
+            && (request.getPassword().length() < 8 || request.getPassword().length() > 72)) {
+            throw new BusinessException("La contrasena debe tener entre 8 y 72 caracteres");
+        }
         String encodedPassword = request.getPassword() != null && !request.getPassword().isBlank()
             ? passwordEncoder.encode(request.getPassword())
             : existingUser.getPassword();
