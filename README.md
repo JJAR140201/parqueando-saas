@@ -34,6 +34,7 @@ inseguros (el secreto de licencias por defecto que tuvo el repositorio esta rech
 | `APP_CORS_ALLOWED_ORIGINS` | recomendada | Origenes permitidos, separados por coma. Admite patrones (`https://*.vercel.app`). Por defecto: localhost y `*.vercel.app` |
 | `APP_JWT_EXPIRATION_MILLIS` | no | Vida del access token (por defecto 900000 = 15 min) |
 | `SWAGGER_ENABLED` | no | `true` para exponer Swagger UI y api-docs (apagado por defecto) |
+| `WHATSAPP_ENCRYPTION_KEY`, `WHATSAPP_APP_SECRET`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | para WhatsApp | Cifrado de tokens, firma del webhook y verificacion de la URL. Ver [docs/whatsapp.md](docs/whatsapp.md) |
 | `APP_SYNC_MAX_PAYLOAD_BYTES` | no | Tamano maximo del cuerpo de `/api/v1/sync` (por defecto 10 MB) |
 | `APP_SYNC_BASE_URL`, `APP_SYNC_RETENCION_DIAS`, `APP_SYNC_INTERVALO_SEGUNDOS` | no | Sincronizacion con escritorio |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | no | `validate` por defecto: el esquema lo crea Flyway. Si Railway tiene `update`, se puede dejar o quitar la variable |
@@ -48,6 +49,12 @@ inseguros (el secreto de licencias por defecto que tuvo el repositorio esta rech
   durante 15 min tras 5 intentos fallidos. El estado esta en memoria: con mas de una instancia
   hay que moverlo a un almacen compartido (por ejemplo Redis).
 - Entradas y salidas de vehiculos toman un bloqueo de fila sobre la sede para no desajustar el cupo.
+
+## Notificaciones por WhatsApp
+
+Mensualidad generada, recordatorio, confirmacion de pago y mensualidad vencida se envian por la Cloud API de Meta, con
+una cuenta de WhatsApp Business por empresa, bitacora de mensajes y webhook de estados. Configuracion, plantillas y
+operacion: [docs/whatsapp.md](docs/whatsapp.md).
 
 ## Pruebas
 

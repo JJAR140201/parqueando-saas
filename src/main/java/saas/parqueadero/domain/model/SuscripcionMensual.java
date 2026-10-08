@@ -20,6 +20,7 @@ public class SuscripcionMensual {
     private LocalDate fechaFin;
     private Boolean activa;
     private String telefono;
+    private Long clienteId;
     private Boolean alertaVencimientoEnviada;
     private Long sedeId;
     private Long empresaId;

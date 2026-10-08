@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import saas.parqueadero.domain.model.SuscripcionMensual;
+import saas.parqueadero.domain.model.TipoNotificacionWhatsapp;
+import saas.parqueadero.domain.port.out.MensualidadEventosPort;
 import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 
 @Service
@@ -15,6 +17,7 @@ import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 public class MensualidadVencimientoNotificationService {
 
     private final SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
+    private final MensualidadEventosPort eventosPort;
 
     /**
      * Cancela automaticamente las mensualidades activas cuya fechaFin ya paso. Si el cliente
@@ -30,6 +33,7 @@ public class MensualidadVencimientoNotificationService {
         vencidas.forEach(suscripcion -> {
             suscripcion.setActiva(false);
             suscripcionMensualRepositoryPort.save(suscripcion);
+            eventosPort.publicar(TipoNotificacionWhatsapp.MENSUALIDAD_VENCIDA, suscripcion.getId());
             log.info("[MensualidadVencimientoNotificationService] Mensualidad cancelada automaticamente por vencimiento id={} placa={} fechaFin={}",
                 suscripcion.getId(), suscripcion.getPlaca(), suscripcion.getFechaFin());
         });

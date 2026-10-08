@@ -13,15 +13,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import saas.parqueadero.domain.model.SuscripcionMensual;
+import saas.parqueadero.domain.model.TipoNotificacionWhatsapp;
+import saas.parqueadero.domain.port.out.MensualidadEventosPort;
 import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 
 @ExtendWith(MockitoExtension.class)
 class MensualidadVencimientoNotificationServiceTest {
 
     @Mock SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
+    @Mock MensualidadEventosPort eventosPort;
 
     private MensualidadVencimientoNotificationService service() {
-        return new MensualidadVencimientoNotificationService(suscripcionMensualRepositoryPort);
+        return new MensualidadVencimientoNotificationService(suscripcionMensualRepositoryPort, eventosPort);
     }
 
     @Test
@@ -36,6 +39,7 @@ class MensualidadVencimientoNotificationServiceTest {
 
         verify(suscripcionMensualRepositoryPort, times(1)).save(vencida);
         org.assertj.core.api.Assertions.assertThat(vencida.getActiva()).isFalse();
+        verify(eventosPort).publicar(TipoNotificacionWhatsapp.MENSUALIDAD_VENCIDA, 1L);
     }
 
     @Test
@@ -45,5 +49,6 @@ class MensualidadVencimientoNotificationServiceTest {
         service().cancelarVencidas();
 
         verify(suscripcionMensualRepositoryPort, never()).save(any());
+        verify(eventosPort, never()).publicar(any(), any());
     }
 }

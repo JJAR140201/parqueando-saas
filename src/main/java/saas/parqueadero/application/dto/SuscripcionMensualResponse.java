@@ -22,6 +22,9 @@ public class SuscripcionMensualResponse {
     private Boolean activa;
     private Boolean vigenteHoy;
     private String telefono;
+    private Long clienteId;
+    private String nombreCliente;
+    private Boolean whatsappHabilitado;
     private Long sedeId;
     private Long empresaId;
 }
