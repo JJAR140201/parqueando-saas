@@ -1,5 +1,6 @@
 package saas.parqueadero.infrastructure.adapters.in.rest.controller;
 
+import saas.parqueadero.application.util.MonedaCop;
 import com.lowagie.text.Document;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
@@ -150,7 +151,7 @@ public class ReporteParqueoController {
                 setCell(row, 2, r.getFechaEntrada() != null ? r.getFechaEntrada().format(DT_FMT) : "", style);
                 setCell(row, 3, r.getFechaSalida() != null ? r.getFechaSalida().format(DT_FMT) : "En curso", style);
                 setCell(row, 4, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-", style);
-                setCell(row, 5, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-", style);
+                setCell(row, 5, r.getTotalPagado() != null ? MonedaCop.formatear(r.getTotalPagado()) : "-", style);
                 setCell(row, 6, r.getEstado() != null ? r.getEstado().name() : "", style);
                 setCell(row, 7, r.getSedeNombre() != null ? r.getSedeNombre() : "-", style);
                 setCell(row, 8, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-", style);
@@ -169,7 +170,7 @@ public class ReporteParqueoController {
                 .map(ReporteRegistroResponse::getTotalPagado)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalsRow.createCell(4).setCellValue("TOTAL COBRADO:");
-            totalsRow.createCell(5).setCellValue("$" + totalPagado.toPlainString());
+            totalsRow.createCell(5).setCellValue(MonedaCop.formatear(totalPagado));
 
             wb.write(out);
             return out.toByteArray();
@@ -216,7 +217,7 @@ public class ReporteParqueoController {
             addPdfCell(table, dFont, bg, r.getFechaEntrada() != null ? r.getFechaEntrada().format(DT_FMT) : "");
             addPdfCell(table, dFont, bg, r.getFechaSalida() != null ? r.getFechaSalida().format(DT_FMT) : "En curso");
             addPdfCell(table, dFont, bg, r.getMinutosEstadia() != null ? r.getMinutosEstadia().toString() : "-");
-            addPdfCell(table, dFont, bg, r.getTotalPagado() != null ? "$" + r.getTotalPagado().toPlainString() : "-");
+            addPdfCell(table, dFont, bg, r.getTotalPagado() != null ? MonedaCop.formatear(r.getTotalPagado()) : "-");
             addPdfCell(table, dFont, bg, r.getEstado() != null ? r.getEstado().name() : "");
             addPdfCell(table, dFont, bg, r.getSedeNombre() != null ? r.getSedeNombre() : "-");
             addPdfCell(table, dFont, bg, r.getUsuarioNombre() != null ? r.getUsuarioNombre() : "-");
