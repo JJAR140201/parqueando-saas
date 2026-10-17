@@ -14,13 +14,14 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
+import saas.parqueadero.application.util.MonedaCop;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import saas.parqueadero.application.dto.PrecioSalidaResponse;
 
 /**
  * Genera un ticket/recibo de parqueo en formato PDF imprimible.
- * El ticket es un recibo angosto estilo termico (80 mm de ancho).
+ * El ticket es un recibo angosto estilo termico (58 mm de ancho, alto segun el contenido).
  */
 @Service
 @RequiredArgsConstructor
@@ -29,17 +30,20 @@ public class TicketParqueoService {
 
     private static final DateTimeFormatter DATE_FMT  = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FMT  = DateTimeFormatter.ofPattern("hh:mm:ss a");
-    private static final float TICKET_WIDTH  = 226f;   // ~80 mm en puntos
-    private static final float TICKET_HEIGHT = 620f;
-    private static final float MARGIN        = 14f;
+    private static final float TICKET_WIDTH  = 164f;   // ~58 mm en puntos
+    private static final float MEASURE_HEIGHT = 1000f; // pagina de medicion; el alto real se ajusta al contenido
+    private static final float MARGIN        = 8f;
+    private static final int   SEPARATOR_LEN = 30;
+    private static final int   LABEL_WIDTH   = 10;
+    private static final float LEADING       = 1.15f;
 
     // Fuentes
-    private static final Font FONT_TITLE  = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  16, Color.BLACK);
-    private static final Font FONT_HEADER = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  10, Color.BLACK);
-    private static final Font FONT_BODY   = FontFactory.getFont(FontFactory.HELVETICA,       9,  Color.BLACK);
-    private static final Font FONT_SMALL  = FontFactory.getFont(FontFactory.HELVETICA,       7,  Color.DARK_GRAY);
-    private static final Font FONT_TOTAL  = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  11, Color.BLACK);
-    private static final Font FONT_FOOTER = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  8,  Color.BLACK);
+    private static final Font FONT_TITLE  = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  12, Color.BLACK);
+    private static final Font FONT_HEADER = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  8, Color.BLACK);
+    private static final Font FONT_BODY   = FontFactory.getFont(FontFactory.HELVETICA,       7,  Color.BLACK);
+    private static final Font FONT_SMALL  = FontFactory.getFont(FontFactory.HELVETICA,       6,  Color.DARK_GRAY);
+    private static final Font FONT_TOTAL  = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  9, Color.BLACK);
+    private static final Font FONT_FOOTER = FontFactory.getFont(FontFactory.HELVETICA_BOLD,  6.5f, Color.BLACK);
 
     /**
      * Genera el PDF del ticket a partir de un {@link PrecioSalidaResponse}.
@@ -50,26 +54,34 @@ public class TicketParqueoService {
     public byte[] generarTicket(PrecioSalidaResponse precio) {
         log.debug("[TicketParqueoService] Generando ticket para placa={}", precio.getPlaca());
 
-        Rectangle pageSize = new Rectangle(TICKET_WIDTH, TICKET_HEIGHT);
+        // Dos pasadas: la primera mide cuanto ocupa el contenido; la segunda ajusta la pagina a ese alto.
+        Render medido = renderizar(precio, MEASURE_HEIGHT);
+        return renderizar(precio, medido.usado() + MARGIN).pdf();
+    }
+
+    private record Render(byte[] pdf, float usado) {}
+
+    private Render renderizar(PrecioSalidaResponse precio, float alto) {
+        Rectangle pageSize = new Rectangle(TICKET_WIDTH, alto);
         pageSize.setBackgroundColor(Color.WHITE);
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document doc = new Document(pageSize, MARGIN, MARGIN, MARGIN, MARGIN);
-            PdfWriter.getInstance(doc, out);
+            PdfWriter writer = PdfWriter.getInstance(doc, out);
             doc.open();
 
-            Paragraph empresa = new Paragraph(valor(precio.getNombreEmpresa()), FONT_TITLE);
+            Paragraph empresa = parrafo(valor(precio.getNombreEmpresa()), FONT_TITLE);
             empresa.setAlignment(Element.ALIGN_CENTER);
             empresa.setSpacingAfter(2f);
             doc.add(empresa);
 
-            Paragraph sede = new Paragraph(valor(precio.getNombreSede()), FONT_HEADER);
+            Paragraph sede = parrafo(valor(precio.getNombreSede()), FONT_HEADER);
             sede.setAlignment(Element.ALIGN_CENTER);
             sede.setSpacingAfter(6f);
             doc.add(sede);
 
             // ---- Titulo ----
-            Paragraph titulo = new Paragraph("RECIBO DE PARQUEO", FONT_TITLE);
+            Paragraph titulo = parrafo("RECIBO DE PARQUEO", FONT_TITLE);
             titulo.setAlignment(Element.ALIGN_CENTER);
             titulo.setSpacingAfter(4f);
             doc.add(titulo);
@@ -82,7 +94,7 @@ public class TicketParqueoService {
                 ? precio.getFechaEntrada().format(DATE_FMT)
                 : "N/A";
 
-            Paragraph fechaPar = new Paragraph(fecha, FONT_HEADER);
+            Paragraph fechaPar = parrafo(fecha, FONT_HEADER);
             fechaPar.setAlignment(Element.ALIGN_CENTER);
             fechaPar.setSpacingAfter(6f);
             doc.add(fechaPar);
@@ -130,13 +142,13 @@ public class TicketParqueoService {
             boolean mensualidad = Boolean.TRUE.equals(precio.getMensualidadActiva());
             String valorLabel = mensualidad ? "SIN COSTO (MENSUALIDAD)" : formatearValor(precio);
 
-            Paragraph totalPar = new Paragraph("PAGADO: " + valorLabel, FONT_TOTAL);
+            Paragraph totalPar = parrafo("PAGADO: " + valorLabel, FONT_TOTAL);
             totalPar.setAlignment(Element.ALIGN_CENTER);
             totalPar.setSpacingAfter(2f);
             doc.add(totalPar);
 
             if (mensualidad) {
-                Paragraph mensualPar = new Paragraph("Mensualidad activa", FONT_SMALL);
+                Paragraph mensualPar = parrafo("Mensualidad activa", FONT_SMALL);
                 mensualPar.setAlignment(Element.ALIGN_CENTER);
                 doc.add(mensualPar);
             }
@@ -148,24 +160,25 @@ public class TicketParqueoService {
 
             // ---- Codigo de referencia (placa como texto) ----
             if (precio.getPlaca() != null) {
-                Paragraph refPar = new Paragraph("REF: " + precio.getPlaca(), FONT_SMALL);
+                Paragraph refPar = parrafo("REF: " + precio.getPlaca(), FONT_SMALL);
                 refPar.setAlignment(Element.ALIGN_CENTER);
                 refPar.setSpacingAfter(6f);
                 doc.add(refPar);
             }
 
             // ---- Mensaje final ----
-            Paragraph gracias = new Paragraph("GRACIAS POR SU VISITA", FONT_FOOTER);
+            Paragraph gracias = parrafo("GRACIAS POR SU VISITA", FONT_FOOTER);
             gracias.setAlignment(Element.ALIGN_CENTER);
             doc.add(gracias);
 
-            Paragraph maneje = new Paragraph("MANEJE CON PRECAUCION", FONT_FOOTER);
+            Paragraph maneje = parrafo("MANEJE CON PRECAUCION", FONT_FOOTER);
             maneje.setAlignment(Element.ALIGN_CENTER);
             doc.add(maneje);
 
+            float usado = alto - writer.getVerticalPosition(true) + MARGIN;
             doc.close();
             log.debug("[TicketParqueoService] Ticket PDF generado correctamente para placa={}", precio.getPlaca());
-            return out.toByteArray();
+            return new Render(out.toByteArray(), usado);
         } catch (DocumentException | java.io.IOException e) {
             log.error("[TicketParqueoService] Error generando ticket PDF", e);
             throw new RuntimeException("No se pudo generar el ticket de parqueo", e);
@@ -176,24 +189,41 @@ public class TicketParqueoService {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private void addLabelValue(Document doc, String label, String value) throws DocumentException {
+    /** Parrafo con interlineado compacto (el de iText/OpenPDF es 1.5x y alarga mucho el ticket). */
+    private Paragraph parrafo(String texto, Font fuente) {
+        Paragraph p = new Paragraph(texto, fuente);
+        p.setLeading(0f, LEADING);
+        return p;
+    }
+
+    private Paragraph parrafo() {
         Paragraph p = new Paragraph();
-        p.add(new Chunk(padRight(label, 12), FONT_BODY));
+        p.setLeading(0f, LEADING);
+        return p;
+    }
+
+    private Paragraph parrafo(String texto) {
+        return parrafo(texto, FONT_BODY);
+    }
+
+    private void addLabelValue(Document doc, String label, String value) throws DocumentException {
+        Paragraph p = parrafo();
+        p.add(new Chunk(padRight(label, LABEL_WIDTH), FONT_BODY));
         p.add(new Chunk(value, FONT_HEADER));
         p.setSpacingAfter(2f);
         doc.add(p);
     }
 
     private Paragraph separador(char car) {
-        String linea = String.valueOf(car).repeat(36);
-        Paragraph p = new Paragraph(linea, FONT_SMALL);
+        String linea = String.valueOf(car).repeat(SEPARATOR_LEN);
+        Paragraph p = parrafo(linea, FONT_SMALL);
         p.setAlignment(Element.ALIGN_CENTER);
         p.setSpacingAfter(2f);
         return p;
     }
 
     private Paragraph espaciado(float espacio) {
-        Paragraph p = new Paragraph(" ");
+        Paragraph p = parrafo(" ", FONT_SMALL);
         p.setSpacingAfter(espacio);
         return p;
     }
@@ -204,12 +234,9 @@ public class TicketParqueoService {
 
     private String formatearValor(PrecioSalidaResponse precio) {
         if (precio.getTotalPagado() != null) {
-            return "$ " + precio.getTotalPagado().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
+            return MonedaCop.formatear(precio.getTotalPagado());
         }
-        if (precio.getTotal() != null) {
-            return "$ " + precio.getTotal().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
-        }
-        return "$ 0.00";
+        return MonedaCop.formatear(precio.getTotal());
     }
 
     private String valor(String value) {

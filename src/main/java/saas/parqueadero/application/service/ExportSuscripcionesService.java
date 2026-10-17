@@ -1,5 +1,6 @@
 package saas.parqueadero.application.service;
 
+import saas.parqueadero.application.util.MonedaCop;
 import com.lowagie.text.Document;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
@@ -82,7 +83,7 @@ public class ExportSuscripcionesService {
 
                 setCell(row, 0, suscripcion.getPlaca(), style);
                 setCell(row, 1, suscripcion.getTipoVehiculo() != null ? suscripcion.getTipoVehiculo().name() : "", style);
-                setCell(row, 2, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-", style);
+                setCell(row, 2, suscripcion.getValorMensual() != null ? MonedaCop.formatear(suscripcion.getValorMensual()) : "-", style);
                 setCell(row, 3, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "", style);
                 setCell(row, 4, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "", style);
                 setCell(row, 5, Boolean.TRUE.equals(suscripcion.getVigenteHoy()) ? "Si" : "No", style);
@@ -104,7 +105,7 @@ public class ExportSuscripcionesService {
                 .map(SuscripcionMensualResponse::getValorMensual)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalsRow.createCell(3).setCellValue("TOTAL VALOR MENSUAL:");
-            totalsRow.createCell(4).setCellValue("$" + totalMensual.toPlainString());
+            totalsRow.createCell(4).setCellValue(MonedaCop.formatear(totalMensual));
 
             workbook.write(out);
             return out.toByteArray();
@@ -142,7 +143,7 @@ public class ExportSuscripcionesService {
 
             addPdfCell(table, dataFont, bg, suscripcion.getPlaca() != null ? suscripcion.getPlaca() : "");
             addPdfCell(table, dataFont, bg, suscripcion.getTipoVehiculo() != null ? suscripcion.getTipoVehiculo().name() : "");
-            addPdfCell(table, dataFont, bg, suscripcion.getValorMensual() != null ? "$" + suscripcion.getValorMensual().toPlainString() : "-");
+            addPdfCell(table, dataFont, bg, suscripcion.getValorMensual() != null ? MonedaCop.formatear(suscripcion.getValorMensual()) : "-");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaInicio() != null ? suscripcion.getFechaInicio().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, suscripcion.getFechaFin() != null ? suscripcion.getFechaFin().format(DATE_FORMATTER) : "");
             addPdfCell(table, dataFont, bg, Boolean.TRUE.equals(suscripcion.getVigenteHoy()) ? "Si" : "No");
