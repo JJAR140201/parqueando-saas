@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -87,6 +88,13 @@ public class GlobalExceptionHandler {
         log.warn("[GlobalExceptionHandler] METHOD_NOT_ALLOWED: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
             .body(build("METHOD_NOT_ALLOWED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("[GlobalExceptionHandler] DATA_CONFLICT: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(build("DATA_CONFLICT", "La operacion entra en conflicto con datos existentes (por ejemplo, un registro duplicado)"));
     }
 
     @ExceptionHandler(Exception.class)

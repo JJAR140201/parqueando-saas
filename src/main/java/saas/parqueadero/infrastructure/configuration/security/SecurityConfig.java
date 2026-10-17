@@ -91,6 +91,7 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
         // Auth por cabecera Authorization (Bearer): no se usan cookies, no hacen falta credenciales CORS
         config.setAllowCredentials(false);
+        config.setExposedHeaders(List.of("X-Total-Count", "X-Page", "X-Size", "Content-Disposition"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
