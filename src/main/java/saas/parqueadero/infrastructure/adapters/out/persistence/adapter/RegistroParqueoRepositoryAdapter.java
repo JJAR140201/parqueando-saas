@@ -5,10 +5,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
+import saas.parqueadero.domain.model.Pagina;
 import saas.parqueadero.domain.model.RegistroParqueo;
 import saas.parqueadero.domain.port.out.RegistroParqueoRepositoryPort;
 import saas.parqueadero.infrastructure.adapters.out.persistence.mapper.RegistroParqueoPersistenceMapper;
@@ -51,7 +54,8 @@ public class RegistroParqueoRepositoryAdapter implements RegistroParqueoReposito
     }
 
     @Override
-    public List<RegistroParqueo> findReporte(Long empresaId, Long sedeId, EstadoRegistroParqueo estado, LocalDateTime desde, LocalDateTime hasta) {
+    public Pagina<RegistroParqueo> findReportePagina(Long empresaId, Long sedeId, EstadoRegistroParqueo estado,
+        LocalDateTime desde, LocalDateTime hasta, int pagina, int tamano) {
         Specification<RegistroParqueoJpaEntity> specification = Specification.where(null);
 
         if (empresaId != null) {
@@ -74,9 +78,11 @@ public class RegistroParqueoRepositoryAdapter implements RegistroParqueoReposito
             specification = specification.and((root, query, criteriaBuilder) -> criteriaBuilder.lessThanOrEqualTo(root.get("fechaEntrada"), hasta));
         }
 
-        return registroParqueoJpaRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "fechaEntrada")).stream()
-            .map(mapper::toDomain)
-            .collect(Collectors.toList());
+        Page<RegistroParqueoJpaEntity> resultado = registroParqueoJpaRepository.findAll(specification,
+            PageRequest.of(pagina, tamano, Sort.by(Sort.Direction.DESC, "fechaEntrada").and(Sort.by(Sort.Direction.DESC, "id"))));
+        return new Pagina<>(
+            resultado.getContent().stream().map(mapper::toDomain).collect(Collectors.toList()),
+            resultado.getTotalElements());
     }
 
     @Override

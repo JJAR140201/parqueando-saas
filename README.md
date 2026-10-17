@@ -36,7 +36,8 @@ inseguros (el secreto de licencias por defecto que tuvo el repositorio esta rech
 | `SWAGGER_ENABLED` | no | `true` para exponer Swagger UI y api-docs (apagado por defecto) |
 | `APP_SYNC_MAX_PAYLOAD_BYTES` | no | Tamano maximo del cuerpo de `/api/v1/sync` (por defecto 10 MB) |
 | `APP_SYNC_BASE_URL`, `APP_SYNC_RETENCION_DIAS`, `APP_SYNC_INTERVALO_SEGUNDOS` | no | Sincronizacion con escritorio |
-| `SPRING_JPA_HIBERNATE_DDL_AUTO` | no | `update` por defecto; ver "Pendientes" |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | no | `validate` por defecto: el esquema lo crea Flyway. Si Railway tiene `update`, se puede dejar o quitar la variable |
+| `FLYWAY_ENABLED` | no | `true` por defecto |
 
 ## Seguridad
 
@@ -57,8 +58,17 @@ inseguros (el secreto de licencias por defecto que tuvo el repositorio esta rech
 `ParqueaderoApplicationTests` levanta el contexto completo y necesita PostgreSQL y las variables
 anteriores. En CI se usa un servicio PostgreSQL (`.github/workflows/ci.yml`).
 
+## Base de datos y migraciones
+
+El esquema lo gestiona Flyway (`src/main/resources/db/migration`); Hibernate solo lo valida.
+
+- `V1__esquema_base.sql`: esquema inicial (equivale al que antes creaba `ddl-auto=update`).
+- `V2__placa_activa_unica.sql`: indice unico parcial, una placa ACTIVA por sede y empresa. Si ya hubiera
+  duplicados, no lo crea y avisa en el log (`WARN`); hay que depurarlos y crear el indice a mano.
+- Una base ya existente (sin historial de Flyway) se marca en la version 1 al arrancar
+  (`baseline-on-migrate`) y solo aplica las migraciones siguientes.
+- Para cambiar el esquema: crear `V3__...sql`; no editar migraciones ya aplicadas.
+
 ## Pendientes conocidos
 
-- Migraciones con Flyway y `ddl-auto=validate` (hoy el esquema lo crea Hibernate con `update`),
-  junto con un indice unico parcial de "una placa activa por sede".
 - Paginacion de los reportes y exportaciones.
