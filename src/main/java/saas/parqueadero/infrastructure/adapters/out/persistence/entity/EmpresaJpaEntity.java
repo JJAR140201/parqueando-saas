@@ -28,4 +28,10 @@ public class EmpresaJpaEntity {
 
     @Column(nullable = false, length = 120)
     private String nombre;
+
+    @Column(name = "color_marca", length = 7)
+    private String colorMarca;
+
+    @Column(columnDefinition = "text")
+    private String logo;
 }
