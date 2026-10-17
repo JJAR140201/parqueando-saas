@@ -124,6 +124,8 @@ public class SuperAdminService implements SuperAdminUseCase {
                     .empresaId(empresa.getId())
                     .nit(empresa.getNit())
                     .nombre(empresa.getNombre())
+                    .colorMarca(empresa.getColorMarca())
+                    .logo(empresa.getLogo())
                     .sedes(sedes)
                     .build();
             })
@@ -184,6 +186,8 @@ public class SuperAdminService implements SuperAdminUseCase {
             .id(existing.getId())
             .nit(normalizedNit)
             .nombre(request.getNombre().trim())
+            .colorMarca(existing.getColorMarca())
+            .logo(existing.getLogo())
             .build());
 
         List<Sede> currentSedes = sedeRepositoryPort.findByEmpresaId(empresaId);
@@ -240,6 +244,8 @@ public class SuperAdminService implements SuperAdminUseCase {
             .empresaId(updatedEmpresa.getId())
             .nit(updatedEmpresa.getNit())
             .nombre(updatedEmpresa.getNombre())
+            .colorMarca(updatedEmpresa.getColorMarca())
+            .logo(updatedEmpresa.getLogo())
             .sedes(updatedSedes)
             .build();
     }
