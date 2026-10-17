@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
@@ -36,6 +37,12 @@ public class CreateSuscripcionMensualRequest {
     @NotBlank
     @Pattern(regexp = "^\\+[1-9]\\d{1,14}$", message = "El telefono debe estar en formato E.164 (ej: +573001234567)")
     private String telefono;
+
+    @Size(max = 120)
+    private String nombreCliente;
+
+    /** Consentimiento del cliente para recibir WhatsApp. Si es nulo, no cambia el que ya tenia. */
+    private Boolean whatsappHabilitado;
 
     private Long empresaId;
 

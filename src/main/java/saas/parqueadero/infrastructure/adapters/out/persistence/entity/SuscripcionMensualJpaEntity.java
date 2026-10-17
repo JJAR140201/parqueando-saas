@@ -54,6 +54,9 @@ public class SuscripcionMensualJpaEntity {
     @Column(length = 20)
     private String telefono;
 
+    @Column(name = "cliente_id")
+    private Long clienteId;
+
     @Column(name = "alerta_vencimiento_enviada", nullable = false, columnDefinition = "boolean default false")
     private Boolean alertaVencimientoEnviada;
 

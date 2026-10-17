@@ -28,9 +28,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         "/api/v1/licencias/validar", new Regla("licencias", 20, Duration.ofMinutes(10)),
         "/api/v1/licencias/redimir", new Regla("licencias", 20, Duration.ofMinutes(10)),
         "/api/v1/licencias/renovar", new Regla("licencias", 20, Duration.ofMinutes(10)),
-        "/api/v1/sync/snapshot", new Regla("sync", 30, Duration.ofMinutes(1))
+        "/api/v1/sync/snapshot", new Regla("sync", 30, Duration.ofMinutes(1)),
+        // Meta envia rafagas de eventos; el limite es holgado y la firma HMAC es la barrera real
+        "/api/webhooks/meta/whatsapp", new Regla("webhook", 3000, Duration.ofMinutes(1))
     );
 
+    private static final long MAX_WEBHOOK_BYTES = 1_048_576;
     private static final long LIMPIEZA_MILLIS = Duration.ofMinutes(10).toMillis();
 
     private record Contador(long inicioMillis, int cuenta) {
@@ -54,6 +57,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         if ("sync".equals(regla.grupo()) && request.getContentLengthLong() > maxPayloadBytes) {
+            rechazar(response, HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE, "PAYLOAD_TOO_LARGE",
+                "El cuerpo de la peticion excede el tamano permitido");
+            return;
+        }
+
+        if ("webhook".equals(regla.grupo()) && request.getContentLengthLong() > MAX_WEBHOOK_BYTES) {
             rechazar(response, HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE, "PAYLOAD_TOO_LARGE",
                 "El cuerpo de la peticion excede el tamano permitido");
             return;

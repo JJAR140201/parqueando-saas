@@ -3,6 +3,8 @@ package saas.parqueadero.application.service;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,10 +17,13 @@ import saas.parqueadero.application.dto.UpdateSuscripcionMensualRequest;
 import saas.parqueadero.domain.exception.BusinessException;
 import saas.parqueadero.domain.exception.ResourceNotFoundException;
 import saas.parqueadero.domain.model.AuthenticatedUser;
+import saas.parqueadero.domain.model.Cliente;
 import saas.parqueadero.domain.model.RolUsuario;
 import saas.parqueadero.domain.model.SuscripcionMensual;
+import saas.parqueadero.domain.model.TipoNotificacionWhatsapp;
 import saas.parqueadero.domain.port.in.SuscripcionMensualUseCase;
 import saas.parqueadero.domain.port.out.AuthenticatedUserProviderPort;
+import saas.parqueadero.domain.port.out.MensualidadEventosPort;
 import saas.parqueadero.domain.port.out.SedeRepositoryPort;
 import saas.parqueadero.domain.port.out.SuscripcionMensualRepositoryPort;
 
@@ -30,6 +35,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
     private final SuscripcionMensualRepositoryPort suscripcionMensualRepositoryPort;
     private final AuthenticatedUserProviderPort authenticatedUserProviderPort;
     private final SedeRepositoryPort sedeRepositoryPort;
+    private final ClienteService clienteService;
+    private final MensualidadEventosPort eventosPort;
 
     @Value("${app.mensualidad.alerta.dias-anticipacion}")
     private int diasAnticipacion;
@@ -52,6 +59,9 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             throw new BusinessException("Ya existe una suscripcion activa para esta placa en el rango de fechas indicado");
         }
 
+        Cliente cliente = clienteService.resolverOCrear(scope.empresaId(), request.getTelefono().trim(),
+            request.getNombreCliente(), request.getWhatsappHabilitado(), "Cliente " + placaNormalizada);
+
         SuscripcionMensual created = suscripcionMensualRepositoryPort.save(SuscripcionMensual.builder()
             .placa(placaNormalizada)
             .tipoVehiculo(request.getTipoVehiculo())
@@ -60,6 +70,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaFin(request.getFechaFin())
             .activa(true)
             .telefono(request.getTelefono().trim())
+            .clienteId(cliente.getId())
             .alertaVencimientoEnviada(false)
             .sedeId(scope.sedeId())
             .empresaId(scope.empresaId())
@@ -67,7 +78,9 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
 
         log.debug("[SuscripcionMensualService] Suscripcion creada id={} placa={} empresaId={} sedeId={}",
             created.getId(), created.getPlaca(), created.getEmpresaId(), created.getSedeId());
-        return toResponse(created);
+        // La notificacion se entrega despues de confirmar la transaccion y no puede hacerla fallar
+        eventosPort.publicar(TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, created.getId());
+        return enriquecer(List.of(toResponse(created))).get(0);
     }
 
     @Override
@@ -96,6 +109,8 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
         }
 
         boolean fechaFinCambio = !request.getFechaFin().equals(existing.getFechaFin());
+        Cliente cliente = clienteService.resolverOCrear(existing.getEmpresaId(), request.getTelefono().trim(),
+            request.getNombreCliente(), request.getWhatsappHabilitado(), "Cliente " + existing.getPlaca());
 
         SuscripcionMensual updated = suscripcionMensualRepositoryPort.save(SuscripcionMensual.builder()
             .id(existing.getId())
@@ -106,13 +121,20 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .fechaFin(request.getFechaFin())
             .activa(request.getActiva() != null ? request.getActiva() : existing.getActiva())
             .telefono(request.getTelefono().trim())
+            .clienteId(cliente.getId())
             .alertaVencimientoEnviada(fechaFinCambio ? false : existing.getAlertaVencimientoEnviada())
             .sedeId(existing.getSedeId())
             .empresaId(existing.getEmpresaId())
             .build());
 
         log.debug("[SuscripcionMensualService] Suscripcion actualizada id={} placa={}", updated.getId(), updated.getPlaca());
-        return toResponse(updated);
+        // Renovar = pagar: se extiende la fecha de fin o se reactiva una mensualidad inactiva
+        boolean renovada = Boolean.TRUE.equals(updated.getActiva())
+            && (request.getFechaFin().isAfter(existing.getFechaFin()) || Boolean.FALSE.equals(existing.getActiva()));
+        if (renovada) {
+            eventosPort.publicar(TipoNotificacionWhatsapp.CONFIRMACION_PAGO, updated.getId());
+        }
+        return enriquecer(List.of(toResponse(updated))).get(0);
     }
 
     @Override
@@ -122,21 +144,21 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
         // Si es SUPER_ADMIN sin filtros, devuelve todas las suscripciones de todas las empresas
         if (hasRole(currentUser, RolUsuario.SUPER_ADMIN) && empresaId == null && sedeId == null) {
             String placaFiltro = placa == null ? null : placa.trim().toUpperCase();
-            return suscripcionMensualRepositoryPort.findAll()
+            return enriquecer(suscripcionMensualRepositoryPort.findAll()
                 .stream()
                 .filter(s -> placaFiltro == null || s.getPlaca().contains(placaFiltro))
                 .map(this::toResponse)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
         }
         
         // Para ADMIN/OPERARIO o SUPER_ADMIN con filtros, usa el scope normal
         Scope scope = resolveScope(currentUser, empresaId, sedeId);
         String placaFiltro = placa == null ? null : placa.trim().toUpperCase();
-        return suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId())
+        return enriquecer(suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId())
             .stream()
             .filter(s -> placaFiltro == null || s.getPlaca().contains(placaFiltro))
             .map(this::toResponse)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
     }
 
     @Override
@@ -187,12 +209,12 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             candidatas = suscripcionMensualRepositoryPort.findByEmpresaIdAndSedeId(scope.empresaId(), scope.sedeId());
         }
 
-        return candidatas.stream()
+        return enriquecer(candidatas.stream()
             .filter(s -> Boolean.TRUE.equals(s.getActiva()))
             .filter(s -> s.getFechaFin() != null && !s.getFechaFin().isBefore(hoy) && !s.getFechaFin().isAfter(limite))
             .sorted(Comparator.comparing(SuscripcionMensual::getFechaFin))
             .map(this::toResponse)
-            .collect(Collectors.toList());
+            .collect(Collectors.toList()));
     }
 
     private Scope resolveScope(AuthenticatedUser user, Long empresaIdParam, Long sedeIdParam) {
@@ -250,6 +272,21 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .anyMatch(role -> role.equals(rol.name()));
     }
 
+    /** Completa nombre y consentimiento del cliente con una sola consulta para toda la lista. */
+    private List<SuscripcionMensualResponse> enriquecer(List<SuscripcionMensualResponse> respuestas) {
+        Set<Long> ids = respuestas.stream().map(SuscripcionMensualResponse::getClienteId)
+            .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, Cliente> clientes = clienteService.porIds(ids);
+        respuestas.forEach(r -> {
+            Cliente cliente = r.getClienteId() == null ? null : clientes.get(r.getClienteId());
+            if (cliente != null) {
+                r.setNombreCliente(cliente.getNombre());
+                r.setWhatsappHabilitado(cliente.isWhatsappHabilitado());
+            }
+        });
+        return respuestas;
+    }
+
     private SuscripcionMensualResponse toResponse(SuscripcionMensual suscripcion) {
         LocalDate hoy = LocalDate.now();
         boolean vigenteHoy = Boolean.TRUE.equals(suscripcion.getActiva())
@@ -266,6 +303,7 @@ public class SuscripcionMensualService implements SuscripcionMensualUseCase {
             .activa(suscripcion.getActiva())
             .vigenteHoy(vigenteHoy)
             .telefono(suscripcion.getTelefono())
+            .clienteId(suscripcion.getClienteId())
             .sedeId(suscripcion.getSedeId())
             .empresaId(suscripcion.getEmpresaId())
             .build();

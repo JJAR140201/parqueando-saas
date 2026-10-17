@@ -61,11 +61,14 @@ public class SecurityConfig {
                                 // Activacion publica de licencias: el cliente aun no tiene usuario/JWT
                                 "/api/v1/licencias/validar",
                                 "/api/v1/licencias/redimir",
-                                "/api/v1/licencias/renovar"
+                                "/api/v1/licencias/renovar",
+                                // Webhook de Meta: sin JWT; se valida con la firma X-Hub-Signature-256
+                                "/api/webhooks/meta/whatsapp"
                         ).permitAll()
                         // Defensa en profundidad: los servicios tambien validan el rol
                         .requestMatchers("/api/v1/super-admin/**", "/api/v1/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/auth/register").hasAnyRole("SUPER_ADMIN", "ADMIN")
+                        .requestMatchers("/api/v1/whatsapp/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .anyRequest().authenticated()
                 )
 
