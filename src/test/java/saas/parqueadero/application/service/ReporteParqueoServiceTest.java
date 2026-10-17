@@ -2,6 +2,7 @@ package saas.parqueadero.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -89,5 +90,42 @@ class ReporteParqueoServiceTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getResumenDia(99L, null))
             .isInstanceOf(saas.parqueadero.domain.exception.BusinessException.class);
+    }
+
+    @Test
+    void paginaDelReporteDevuelveItemsYTotal() {
+        conRol("ADMIN", 5L, 50L);
+        RegistroParqueo r = RegistroParqueo.builder().id(1L).placa("ABC123").tipoVehiculo(TipoVehiculo.CARRO)
+            .estado(EstadoRegistroParqueo.ACTIVO).fechaEntrada(LocalDateTime.now()).empresaId(5L).sedeId(50L).build();
+        when(registroParqueoRepositoryPort.findReportePagina(5L, 50L, null, null, null, 2, 10))
+            .thenReturn(new saas.parqueadero.domain.model.Pagina<>(List.of(r), 21));
+
+        var resultado = service.getReportePagina(null, null, null, null, null, 2, 10);
+
+        assertThat(resultado.total()).isEqualTo(21);
+        assertThat(resultado.items()).hasSize(1);
+        assertThat(resultado.items().get(0).getPlaca()).isEqualTo("ABC123");
+    }
+
+    @Test
+    void rechazaParametrosDePaginaInvalidos() {
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getReportePagina(null, null, null, null, null, -1, 10))
+            .isInstanceOf(saas.parqueadero.domain.exception.BusinessException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getReportePagina(null, null, null, null, null, 0, 0))
+            .isInstanceOf(saas.parqueadero.domain.exception.BusinessException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getReportePagina(null, null, null, null, null, 0, 5001))
+            .isInstanceOf(saas.parqueadero.domain.exception.BusinessException.class);
+    }
+
+    @Test
+    void exportarRechazaReportesDemasiadoGrandes() {
+        conRol("ADMIN", 5L, 50L);
+        when(registroParqueoRepositoryPort.findReportePagina(any(), any(), any(), any(), any(), anyInt(), anyInt()))
+            .thenReturn(new saas.parqueadero.domain.model.Pagina<>(List.of(), 50_001));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getReporteParaExportar(null, null, null, null, null))
+            .isInstanceOf(saas.parqueadero.domain.exception.BusinessException.class)
+            .hasMessageContaining("Acota el rango de fechas");
     }
 }

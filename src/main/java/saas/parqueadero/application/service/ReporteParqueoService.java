@@ -11,11 +11,13 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import saas.parqueadero.application.dto.ConteoPorTipoResponse;
+import saas.parqueadero.application.dto.ReportePaginaResponse;
 import saas.parqueadero.application.dto.ReporteRegistroResponse;
 import saas.parqueadero.application.dto.ResumenDiaResponse;
 import saas.parqueadero.domain.exception.BusinessException;
 import saas.parqueadero.domain.model.AuthenticatedUser;
 import saas.parqueadero.domain.model.EstadoRegistroParqueo;
+import saas.parqueadero.domain.model.Pagina;
 import saas.parqueadero.domain.model.RegistroParqueo;
 import saas.parqueadero.domain.model.RolUsuario;
 import saas.parqueadero.domain.model.TipoVehiculo;
@@ -35,7 +37,30 @@ public class ReporteParqueoService implements ReporteParqueoUseCase {
     private final UsuarioRepositoryPort usuarioRepositoryPort;
 
     @Override
-    public List<ReporteRegistroResponse> getReporte(Long empresaId, Long sedeId, EstadoRegistroParqueo estado, LocalDate desde, LocalDate hasta) {
+    public ReportePaginaResponse getReportePagina(Long empresaId, Long sedeId, EstadoRegistroParqueo estado,
+        LocalDate desde, LocalDate hasta, int pagina, int tamano) {
+        if (pagina < 0) {
+            throw new BusinessException("La pagina no puede ser negativa");
+        }
+        if (tamano < 1 || tamano > TAMANO_MAXIMO_PAGINA) {
+            throw new BusinessException("El tamano de pagina debe estar entre 1 y " + TAMANO_MAXIMO_PAGINA);
+        }
+        return consultar(empresaId, sedeId, estado, desde, hasta, pagina, tamano);
+    }
+
+    @Override
+    public List<ReporteRegistroResponse> getReporteParaExportar(Long empresaId, Long sedeId, EstadoRegistroParqueo estado,
+        LocalDate desde, LocalDate hasta) {
+        ReportePaginaResponse resultado = consultar(empresaId, sedeId, estado, desde, hasta, 0, MAX_FILAS_EXPORTACION);
+        if (resultado.total() > MAX_FILAS_EXPORTACION) {
+            throw new BusinessException("El reporte tiene " + resultado.total() + " registros y el maximo para exportar es "
+                + MAX_FILAS_EXPORTACION + ". Acota el rango de fechas.");
+        }
+        return resultado.items();
+    }
+
+    private ReportePaginaResponse consultar(Long empresaId, Long sedeId, EstadoRegistroParqueo estado,
+        LocalDate desde, LocalDate hasta, int pagina, int tamano) {
         AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
         RolUsuario rol = resolveRol(currentUser);
 
@@ -44,16 +69,61 @@ public class ReporteParqueoService implements ReporteParqueoUseCase {
         LocalDateTime desdeDateTime = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDateTime = hasta != null ? hasta.atTime(LocalTime.MAX) : null;
 
-        List<RegistroParqueo> registros = registroParqueoRepositoryPort
-            .findReporte(scope.empresaId(), scope.sedeId(), estado, desdeDateTime, hastaDateTime);
+        Pagina<RegistroParqueo> resultado = registroParqueoRepositoryPort
+            .findReportePagina(scope.empresaId(), scope.sedeId(), estado, desdeDateTime, hastaDateTime, pagina, tamano);
 
         Map<String, String> sedesByScopeAndId = new HashMap<>();
         Map<Long, String> usuariosById = new HashMap<>();
 
-        return registros
+        List<ReporteRegistroResponse> items = resultado.contenido()
             .stream()
             .map(registro -> toResponse(registro, sedesByScopeAndId, usuariosById))
             .collect(Collectors.toList());
+        return new ReportePaginaResponse(items, resultado.total());
+    }
+
+    @Override
+    public ResumenDiaResponse getResumenDia(Long empresaId, Long sedeId) {
+        AuthenticatedUser currentUser = authenticatedUserProviderPort.getCurrentUser();
+        RolUsuario rol = resolveRol(currentUser);
+
+        Scope scope = resolveScopeByRole(currentUser, rol, empresaId, sedeId);
+
+        LocalDate hoy = LocalDate.now();
+        LocalDateTime inicioDia = hoy.atStartOfDay();
+        LocalDateTime finDia = hoy.atTime(LocalTime.MAX);
+
+        List<RegistroParqueo> registros = registroParqueoRepositoryPort
+            .findActividadDelDia(scope.empresaId(), scope.sedeId(), inicioDia, finDia);
+
+        ConteoPorTipoResponse dentro = contarPorTipo(registros, r -> r.getEstado() == EstadoRegistroParqueo.ACTIVO);
+        ConteoPorTipoResponse entradasHoy = contarPorTipo(registros, r -> r.getFechaEntrada() != null
+            && !r.getFechaEntrada().isBefore(inicioDia) && !r.getFechaEntrada().isAfter(finDia));
+        ConteoPorTipoResponse salidasHoy = contarPorTipo(registros, r -> r.getEstado() == EstadoRegistroParqueo.FINALIZADO
+            && r.getFechaSalida() != null && !r.getFechaSalida().isBefore(inicioDia) && !r.getFechaSalida().isAfter(finDia));
+
+        return ResumenDiaResponse.builder()
+            .fecha(hoy)
+            .dentro(dentro)
+            .entradasHoy(entradasHoy)
+            .salidasHoy(salidasHoy)
+            .build();
+    }
+
+    private ConteoPorTipoResponse contarPorTipo(List<RegistroParqueo> registros, java.util.function.Predicate<RegistroParqueo> filtro) {
+        int carros = 0;
+        int motos = 0;
+        for (RegistroParqueo registro : registros) {
+            if (!filtro.test(registro)) {
+                continue;
+            }
+            if (registro.getTipoVehiculo() == TipoVehiculo.CARRO) {
+                carros++;
+            } else if (registro.getTipoVehiculo() == TipoVehiculo.MOTO) {
+                motos++;
+            }
+        }
+        return ConteoPorTipoResponse.builder().carros(carros).motos(motos).total(carros + motos).build();
     }
 
     @Override
