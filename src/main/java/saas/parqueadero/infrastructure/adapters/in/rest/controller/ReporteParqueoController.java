@@ -81,14 +81,6 @@ public class ReporteParqueoController {
         return ResponseEntity.ok(reporteParqueoUseCase.getResumenDia(empresaId, sedeId));
     }
 
-    @GetMapping("/resumen-dia")
-    public ResponseEntity<ResumenDiaResponse> getResumenDia(
-        @RequestParam(required = false) Long empresaId,
-        @RequestParam(required = false) Long sedeId
-    ) {
-        return ResponseEntity.ok(reporteParqueoUseCase.getResumenDia(empresaId, sedeId));
-    }
-
     @GetMapping("/parqueo/excel")
     public ResponseEntity<byte[]> getReporteExcel(
         @RequestParam(required = false) Long empresaId,
