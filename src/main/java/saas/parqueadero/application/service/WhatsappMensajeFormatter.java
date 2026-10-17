@@ -1,8 +1,7 @@
 package saas.parqueadero.application.service;
 
+import saas.parqueadero.application.util.MonedaCop;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -53,9 +52,7 @@ public class WhatsappMensajeFormatter {
     }
 
     static String valor(BigDecimal valor) {
-        DecimalFormatSymbols simbolos = new DecimalFormatSymbols(ES_CO);
-        simbolos.setGroupingSeparator('.');
-        return "$" + new DecimalFormat("#,##0", simbolos).format(valor);
+        return MonedaCop.formatear(valor);
     }
 
     /** Meta rechaza saltos de linea, tabulaciones y mas de 4 espacios seguidos en las variables. */
