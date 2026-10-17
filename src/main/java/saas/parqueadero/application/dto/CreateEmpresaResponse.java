@@ -14,5 +14,7 @@ public class CreateEmpresaResponse {
     private Long empresaId;
     private String nit;
     private String nombre;
+    private String colorMarca;
+    private String logo;
     private List<SedeSummaryResponse> sedes;
 }

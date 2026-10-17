@@ -13,4 +13,6 @@ public class Empresa {
     private Long id;
     private String nit;
     private String nombre;
+    private String colorMarca;
+    private String logo;
 }
