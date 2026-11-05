@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -79,10 +80,8 @@ public class WhatsappNotificationService implements MensualidadNotificacionUseCa
             return Resultado.FALLIDA;
         }
 
-        // Solo la cuenta de la empresa duena de la mensualidad: una empresa jamas usa la de otra
-        WhatsappAccount cuenta = accountRepository.findByEmpresaId(empresa.getId())
-            .filter(WhatsappAccount::isEnabled)
-            .orElse(null);
+        // La cuenta propia de la empresa o, si no tiene, el numero central de Parqueando
+        WhatsappAccount cuenta = cuentaParaEmpresa(empresa.getId()).orElse(null);
         if (cuenta == null) {
             log.debug("[WhatsappNotificationService] Empresa {} sin cuenta de WhatsApp habilitada", empresa.getId());
             return Resultado.OMITIDA_SIN_CUENTA;
@@ -95,33 +94,54 @@ public class WhatsappNotificationService implements MensualidadNotificacionUseCa
         String destino = cliente != null ? cliente.getTelefono() : String.valueOf(suscripcion.getTelefono());
 
         if (cliente == null) {
-            registrarNoEnviado(cuenta, null, suscripcion, destino, tipo, "SIN_CLIENTE", "La mensualidad no tiene un cliente asociado");
+            registrarNoEnviado(cuenta, empresa.getId(), null, suscripcion, destino, tipo, "SIN_CLIENTE", "La mensualidad no tiene un cliente asociado");
             return Resultado.OMITIDA_NO_PERMITIDA;
         }
         if (!permitido(cliente, tipo)) {
-            registrarNoEnviado(cuenta, cliente, suscripcion, destino, tipo, "PREFERENCIA_DESHABILITADA",
+            registrarNoEnviado(cuenta, empresa.getId(), cliente, suscripcion, destino, tipo, "PREFERENCIA_DESHABILITADA",
                 "El cliente no acepta este tipo de mensajes por WhatsApp");
             return Resultado.OMITIDA_NO_PERMITIDA;
         }
         if (!telefonoValido(cliente.getTelefono())) {
-            registrarNoEnviado(cuenta, cliente, suscripcion, destino, tipo, "TELEFONO_INVALIDO",
+            registrarNoEnviado(cuenta, empresa.getId(), cliente, suscripcion, destino, tipo, "TELEFONO_INVALIDO",
                 "El telefono del cliente no tiene formato internacional valido");
             return Resultado.OMITIDA_TELEFONO_INVALIDO;
         }
 
         List<String> variables = formatter.variables(tipo, cliente, suscripcion, empresa, java.time.LocalDate.now(clock));
-        WhatsappMessage mensaje = enviar(cuenta, cliente.getId(), suscripcion.getId(), cliente.getTelefono(), tipo, variables);
+        WhatsappMessage mensaje = enviar(cuenta, empresa.getId(), cliente.getId(), suscripcion.getId(), cliente.getTelefono(), tipo, variables);
         return mensaje.getStatus() == WhatsappMessageStatus.ACCEPTED ? Resultado.ENVIADA : Resultado.FALLIDA;
     }
 
+    /**
+     * Cuenta con la que se le escribe a los clientes de una empresa:
+     * <ol>
+     *   <li>Si la empresa tiene cuenta propia, siempre esa (si esta deshabilitada, WhatsApp queda apagado
+     *       para la empresa: no se cae al numero central).</li>
+     *   <li>Si no tiene cuenta, la del numero central de Parqueando ({@code app.whatsapp.plataforma-empresa-id}),
+     *       siempre que exista y este habilitada.</li>
+     * </ol>
+     * Una empresa nunca usa la cuenta propia de otra empresa cliente.
+     */
+    public Optional<WhatsappAccount> cuentaParaEmpresa(Long empresaId) {
+        Optional<WhatsappAccount> propia = accountRepository.findByEmpresaId(empresaId);
+        if (propia.isPresent()) {
+            return propia.filter(WhatsappAccount::isEnabled);
+        }
+        if (!properties.hasPlataforma() || properties.plataformaEmpresaId().equals(empresaId)) {
+            return Optional.empty();
+        }
+        return accountRepository.findByEmpresaId(properties.plataformaEmpresaId()).filter(WhatsappAccount::isEnabled);
+    }
+
     /** Envia un mensaje de plantilla de ejemplo para validar la cuenta (no depende de una mensualidad). */
-    public WhatsappMessage enviarPrueba(WhatsappAccount cuenta, String nombreEmpresa, String telefono) {
+    public WhatsappMessage enviarPrueba(WhatsappAccount cuenta, Long empresaId, String nombreEmpresa, String telefono) {
         List<String> variables = formatter.variablesDePrueba(nombreEmpresa, java.time.LocalDate.now(clock));
         if (!telefonoValido(telefono)) {
-            return registrarNoEnviado(cuenta, null, null, telefono, TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA,
+            return registrarNoEnviado(cuenta, empresaId, null, null, telefono, TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA,
                 "TELEFONO_INVALIDO", "El telefono no tiene formato internacional valido");
         }
-        return enviar(cuenta, null, null, telefono, TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, variables);
+        return enviar(cuenta, empresaId, null, null, telefono, TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, variables);
     }
 
     public static boolean telefonoValido(String telefono) {
@@ -139,11 +159,15 @@ public class WhatsappNotificationService implements MensualidadNotificacionUseCa
         };
     }
 
-    private WhatsappMessage enviar(WhatsappAccount cuenta, Long clienteId, Long suscripcionId, String destino,
+    /**
+     * @param empresaId empresa a la que pertenece el mensaje (la duena del cliente). Puede ser distinta de la
+     *                  de la cuenta cuando se envia por el numero central.
+     */
+    private WhatsappMessage enviar(WhatsappAccount cuenta, Long empresaId, Long clienteId, Long suscripcionId, String destino,
         TipoNotificacionWhatsapp tipo, List<String> variables) {
         Instant solicitado = clock.instant();
         WhatsappMessage mensaje = messageRepository.save(WhatsappMessage.builder()
-            .empresaId(cuenta.getEmpresaId())
+            .empresaId(empresaId)
             .whatsappAccountId(cuenta.getId())
             .clienteId(clienteId)
             .suscripcionId(suscripcionId)
@@ -179,16 +203,16 @@ public class WhatsappNotificationService implements MensualidadNotificacionUseCa
         WhatsappMessage guardado = messageRepository.save(mensaje);
         actualizarEstadoDeCuenta(cuenta, resultado);
 
-        log.info("[WhatsappNotificationService] Mensaje {} tipo={} empresaId={} estado={}",
-            guardado.getId(), tipo, cuenta.getEmpresaId(), guardado.getStatus());
+        log.info("[WhatsappNotificationService] Mensaje {} tipo={} empresaId={} cuentaEmpresaId={} estado={}",
+            guardado.getId(), tipo, empresaId, cuenta.getEmpresaId(), guardado.getStatus());
         return guardado;
     }
 
-    private WhatsappMessage registrarNoEnviado(WhatsappAccount cuenta, Cliente cliente, SuscripcionMensual suscripcion,
+    private WhatsappMessage registrarNoEnviado(WhatsappAccount cuenta, Long empresaId, Cliente cliente, SuscripcionMensual suscripcion,
         String destino, TipoNotificacionWhatsapp tipo, String codigo, String descripcion) {
         Instant ahora = clock.instant();
         return messageRepository.save(WhatsappMessage.builder()
-            .empresaId(cuenta.getEmpresaId())
+            .empresaId(empresaId)
             .whatsappAccountId(cuenta.getId())
             .clienteId(cliente == null ? null : cliente.getId())
             .suscripcionId(suscripcion == null ? null : suscripcion.getId())

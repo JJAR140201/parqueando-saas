@@ -14,6 +14,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param encryptionKey        clave AES-256 en Base64 para cifrar los tokens de acceso guardados.
  * @param connectTimeoutMillis tiempo maximo para conectar con Meta.
  * @param readTimeoutMillis    tiempo maximo de espera de la respuesta de Meta.
+ * @param plataformaEmpresaId  empresa cuya cuenta de WhatsApp actua como numero central de Parqueando:
+ *                             la usan las empresas que no tienen cuenta propia. {@code null} lo desactiva.
  */
 @ConfigurationProperties(prefix = "app.whatsapp")
 public record WhatsappProperties(
@@ -24,7 +26,8 @@ public record WhatsappProperties(
     String webhookVerifyToken,
     String encryptionKey,
     Integer connectTimeoutMillis,
-    Integer readTimeoutMillis
+    Integer readTimeoutMillis,
+    Long plataformaEmpresaId
 ) {
 
     public WhatsappProperties {
@@ -43,6 +46,10 @@ public record WhatsappProperties(
         if (readTimeoutMillis == null || readTimeoutMillis < 1) {
             readTimeoutMillis = 10000;
         }
+    }
+
+    public boolean hasPlataforma() {
+        return plataformaEmpresaId != null;
     }
 
     public boolean hasAppSecret() {

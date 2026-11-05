@@ -110,14 +110,17 @@ public class WhatsappAdminService implements WhatsappAdminUseCase {
     @Transactional
     public WhatsappMensajeResponse enviarPrueba(Long empresaId, WhatsappPruebaRequest request) {
         Long empresa = scopeResolver.resolver(empresaId, false);
+        // La cuenta propia (aunque este deshabilitada, para poder probarla) o, si no tiene, el numero central
         WhatsappAccount cuenta = accountRepository.findByEmpresaId(empresa)
-            .orElseThrow(() -> new BusinessException("Primero configura la cuenta de WhatsApp de la empresa"));
+            .or(() -> notificationService.cuentaParaEmpresa(empresa))
+            .orElseThrow(() -> new BusinessException(
+                "La empresa no tiene cuenta de WhatsApp y el numero central de Parqueando no esta configurado"));
         if (!tokenCipher.estaConfigurado()) {
             throw new BusinessException("El cifrado de WhatsApp no esta configurado en el servidor");
         }
         Empresa datosEmpresa = empresaRepository.findById(empresa)
             .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
-        return toResponse(notificationService.enviarPrueba(cuenta, datosEmpresa.getNombre(), request.getTelefono()));
+        return toResponse(notificationService.enviarPrueba(cuenta, empresa, datosEmpresa.getNombre(), request.getTelefono()));
     }
 
     @Override

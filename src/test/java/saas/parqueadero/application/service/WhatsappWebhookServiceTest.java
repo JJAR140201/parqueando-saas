@@ -39,7 +39,7 @@ class WhatsappWebhookServiceTest {
     @BeforeEach
     void setUp() {
         service = new WhatsappWebhookService(accountRepository, messageRepository,
-            new WhatsappProperties(null, null, null, SECRETO, "verif-token", null, null, null), new ObjectMapper(),
+            new WhatsappProperties(null, null, null, SECRETO, "verif-token", null, null, null, null), new ObjectMapper(),
             Clock.fixed(Instant.parse("2026-10-07T15:00:00Z"), ZoneOffset.UTC));
         service.esperaReintentoMillis = 0;
 
@@ -81,7 +81,7 @@ class WhatsappWebhookServiceTest {
     @Test
     void sinSecretoConfiguradoRechazaTodo() throws Exception {
         WhatsappWebhookService sinSecreto = new WhatsappWebhookService(accountRepository, messageRepository,
-            new WhatsappProperties(null, null, null, "", null, null, null, null), new ObjectMapper(), Clock.systemUTC());
+            new WhatsappProperties(null, null, null, "", null, null, null, null, null), new ObjectMapper(), Clock.systemUTC());
 
         // Aun con una firma que seria correcta para un secreto vacio, se rechaza
         assertThat(sinSecreto.firmaValida("x".getBytes(StandardCharsets.UTF_8),
@@ -153,6 +153,27 @@ class WhatsappWebhookServiceTest {
     @Test
     void ignoraEventosDeUnMensajeDeOtraEmpresa() {
         mensaje.setEmpresaId(99L);
+
+        service.procesar(evento("555", "wamid.A", "delivered", 1_790_000_002L, ""));
+
+        assertThat(mensaje.getStatus()).isEqualTo(WhatsappMessageStatus.ACCEPTED);
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void aceptaEstadosDeMensajesEnviadosPorElNumeroCentralParaOtraEmpresa() {
+        // Enviado por la cuenta 7 (numero central) para un cliente de la empresa 99
+        mensaje.setEmpresaId(99L);
+        mensaje.setWhatsappAccountId(7L);
+
+        service.procesar(evento("555", "wamid.A", "delivered", 1_790_000_002L, ""));
+
+        assertThat(mensaje.getStatus()).isEqualTo(WhatsappMessageStatus.DELIVERED);
+    }
+
+    @Test
+    void ignoraEstadosDeMensajesEnviadosPorOtraCuenta() {
+        mensaje.setWhatsappAccountId(8L);
 
         service.procesar(evento("555", "wamid.A", "delivered", 1_790_000_002L, ""));
 

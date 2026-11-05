@@ -66,7 +66,7 @@ class WhatsappNotificationServiceTest {
     void setUp() {
         service = new WhatsappNotificationService(suscripcionRepository, empresaRepository, clienteRepository,
             accountRepository, messageRepository, gateway, cipher, new WhatsappMensajeFormatter(),
-            new WhatsappProperties(null, null, "es", null, null, null, null, null), new ObjectMapper(), clock);
+            new WhatsappProperties(null, null, "es", null, null, null, null, null, null), new ObjectMapper(), clock);
 
         cuenta = WhatsappAccount.builder().id(7L).empresaId(EMPRESA).phoneNumberId("555").enabled(true)
             .status(WhatsappAccountStatus.PENDIENTE).accessTokenEncrypted("v1:cifrado").build();
@@ -247,5 +247,82 @@ class WhatsappNotificationServiceTest {
         assertThat(WhatsappNotificationService.telefonoValido("+57 302 608 8215")).isFalse();
         assertThat(WhatsappNotificationService.telefonoValido(null)).isFalse();
         assertThat(ZoneOffset.UTC).isNotNull();
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Numero central de Parqueando
+    // ---------------------------------------------------------------------------------------------
+
+    private static final long PLATAFORMA = 1L;
+
+    private WhatsappAccount cuentaCentral() {
+        WhatsappAccount central = WhatsappAccount.builder().id(20L).empresaId(PLATAFORMA).phoneNumberId("777").enabled(true)
+            .status(WhatsappAccountStatus.ACTIVA).accessTokenEncrypted("v1:central").build();
+        when(accountRepository.findByEmpresaId(PLATAFORMA)).thenReturn(Optional.of(central));
+        when(cipher.descifrar("v1:central")).thenReturn("TOKEN-CENTRAL");
+        return central;
+    }
+
+    private void usarNumeroCentral() {
+        service = new WhatsappNotificationService(suscripcionRepository, empresaRepository, clienteRepository,
+            accountRepository, messageRepository, gateway, cipher, new WhatsappMensajeFormatter(),
+            new WhatsappProperties(null, null, "es", null, null, null, null, null, PLATAFORMA), new ObjectMapper(), clock);
+    }
+
+    @Test
+    void sinCuentaPropiaUsaElNumeroCentralYRegistraLaEmpresaDelCliente() {
+        usarNumeroCentral();
+        cuentaCentral();
+        when(accountRepository.findByEmpresaId(EMPRESA)).thenReturn(Optional.empty());
+        when(gateway.enviarPlantilla(any(), anyString(), anyString(), anyString(), anyList()))
+            .thenReturn(EnvioResultado.aceptado("wamid.CENTRAL"));
+
+        Resultado resultado = service.notificar(TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, 9L);
+
+        assertThat(resultado).isEqualTo(Resultado.ENVIADA);
+        ArgumentCaptor<Credenciales> credenciales = ArgumentCaptor.forClass(Credenciales.class);
+        verify(gateway).enviarPlantilla(credenciales.capture(), eq("+573001234567"), eq("monthly_invoice_created"), eq("es"),
+            eq(List.of("Juan", "octubre de 2026", "$120.000", "10 de octubre de 2026", "Parqueadero Central")));
+        assertThat(credenciales.getValue().phoneNumberId()).isEqualTo("777");
+        assertThat(credenciales.getValue().accessToken()).isEqualTo("TOKEN-CENTRAL");
+
+        WhatsappMessage guardado = ultimoMensajeGuardado();
+        assertThat(guardado.getEmpresaId()).isEqualTo(EMPRESA);
+        assertThat(guardado.getWhatsappAccountId()).isEqualTo(20L);
+    }
+
+    @Test
+    void unaCuentaPropiaDeshabilitadaApagaWhatsappYNoCaeAlNumeroCentral() {
+        usarNumeroCentral();
+        cuentaCentral();
+        cuenta.setEnabled(false);
+
+        Resultado resultado = service.notificar(TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, 9L);
+
+        assertThat(resultado).isEqualTo(Resultado.OMITIDA_SIN_CUENTA);
+        verify(gateway, never()).enviarPlantilla(any(), anyString(), anyString(), anyString(), anyList());
+    }
+
+    @Test
+    void conElNumeroCentralDeshabilitadoONoConfiguradoNoSeEnvia() {
+        when(accountRepository.findByEmpresaId(EMPRESA)).thenReturn(Optional.empty());
+
+        // Sin plataforma configurada
+        assertThat(service.notificar(TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, 9L)).isEqualTo(Resultado.OMITIDA_SIN_CUENTA);
+
+        // Plataforma configurada pero su cuenta deshabilitada
+        usarNumeroCentral();
+        cuentaCentral().setEnabled(false);
+        assertThat(service.notificar(TipoNotificacionWhatsapp.MENSUALIDAD_GENERADA, 9L)).isEqualTo(Resultado.OMITIDA_SIN_CUENTA);
+
+        verify(gateway, never()).enviarPlantilla(any(), anyString(), anyString(), anyString(), anyList());
+    }
+
+    @Test
+    void conCuentaPropiaNuncaUsaElNumeroCentral() {
+        usarNumeroCentral();
+        cuentaCentral();
+
+        assertThat(service.cuentaParaEmpresa(EMPRESA)).contains(cuenta);
     }
 }

@@ -114,8 +114,8 @@ public class WhatsappWebhookService implements WhatsappWebhookUseCase {
             log.warn("[WhatsappWebhookService] Estado {} para un mensaje desconocido", nuevo);
             return;
         }
-        if (!cuenta.getEmpresaId().equals(mensaje.getEmpresaId())) {
-            // El evento llego por el numero de otra empresa: se ignora
+        if (!enviadoPorLaCuenta(cuenta, mensaje)) {
+            // El evento llego por un numero distinto al que envio el mensaje: se ignora
             log.warn("[WhatsappWebhookService] Estado de mensaje {} no corresponde a la empresa del numero", mensaje.getId());
             return;
         }
@@ -125,6 +125,17 @@ public class WhatsappWebhookService implements WhatsappWebhookUseCase {
             messageRepository.save(mensaje);
             log.info("[WhatsappWebhookService] Mensaje {} -> {}", mensaje.getId(), mensaje.getStatus());
         }
+    }
+
+    /**
+     * El mensaje pertenece al numero del evento si salio por esa cuenta. Con el numero central, la empresa
+     * del mensaje (la duena del cliente) no es la de la cuenta, por eso se compara la cuenta y no la empresa.
+     */
+    static boolean enviadoPorLaCuenta(WhatsappAccount cuenta, WhatsappMessage mensaje) {
+        if (mensaje.getWhatsappAccountId() != null) {
+            return mensaje.getWhatsappAccountId().equals(cuenta.getId());
+        }
+        return cuenta.getEmpresaId().equals(mensaje.getEmpresaId());
     }
 
     /** Aplica el estado solo si avanza en el ciclo de entrega. Devuelve si hubo cambios. */

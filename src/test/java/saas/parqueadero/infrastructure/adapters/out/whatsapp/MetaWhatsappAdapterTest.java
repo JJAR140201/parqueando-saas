@@ -51,7 +51,7 @@ class MetaWhatsappAdapterTest {
 
     private MetaWhatsappAdapter adaptador(String baseUrl) {
         return new MetaWhatsappAdapter(
-            new WhatsappProperties(baseUrl, "v23.0", "es", null, null, null, 1000, 2000), RestClient.builder());
+            new WhatsappProperties(baseUrl, "v23.0", "es", null, null, null, 1000, 2000, null), RestClient.builder());
     }
 
     private MetaWhatsappAdapter adaptador() {
