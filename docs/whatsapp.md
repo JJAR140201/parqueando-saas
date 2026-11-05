@@ -22,6 +22,7 @@ Meta -> POST /api/webhooks/meta/whatsapp (firmado) -> SENT / DELIVERED / READ / 
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | para el webhook | Texto cualquiera que tu eliges; se escribe igual en Meta al configurar el webhook |
 | `WHATSAPP_API_VERSION` | no | Version de Graph API (por defecto `v23.0`). Revisa en Meta cual esta vigente |
 | `WHATSAPP_TEMPLATE_LANGUAGE` | no | Idioma con el que aprobaste las plantillas (por defecto `es`; si usas espanol de Colombia, `es_CO`) |
+| `WHATSAPP_PLATAFORMA_EMPRESA_ID` | no | ID de la empresa cuya cuenta de WhatsApp es el **numero central de Parqueando** (ver seccion 4.1). Vacio = cada empresa solo usa su cuenta propia |
 | `WHATSAPP_RECORDATORIO_CRON` | no | Hora del recordatorio diario (por defecto `0 0 9 * * *`, 9:00 hora de Colombia) |
 | `WHATSAPP_CONNECT_TIMEOUT_MS` / `WHATSAPP_READ_TIMEOUT_MS` | no | Tiempos maximos con Meta (5 s / 10 s) |
 
@@ -70,6 +71,22 @@ curl -X POST "$API/api/v1/whatsapp/mensajes/prueba" -H "Authorization: Bearer $J
 El token nunca vuelve a mostrarse: la API solo informa `tokenConfigurado: true`. Si dejas `accessToken` vacio al
 actualizar, se conserva el anterior. Estado de la cuenta: `PENDIENTE` hasta el primer envio exitoso, `ACTIVA`,
 y `ERROR` si Meta rechaza el token (codigo 190).
+
+### 4.1 Numero central de Parqueando
+
+Para que los parqueaderos no tengan que crear su propia cuenta en Meta, Parqueando puede enviar por **un numero central**:
+
+1. Registra la cuenta de WhatsApp de Parqueando en una empresa (por ejemplo una empresa interna "Parqueando") con el `PUT /api/v1/whatsapp/cuenta` de arriba.
+2. Pon el ID de esa empresa en `WHATSAPP_PLATAFORMA_EMPRESA_ID` y vuelve a desplegar.
+
+Reglas:
+
+- Una empresa **con cuenta propia** siempre usa la suya. Si esa cuenta esta deshabilitada, WhatsApp queda **apagado** para la empresa (no cae al numero central).
+- Una empresa **sin cuenta** usa el numero central, si existe y esta habilitado.
+- La bitacora guarda la **empresa del cliente** (no la de la cuenta central), asi cada empresa ve solo sus mensajes y metricas, y `whatsapp_account_id` indica por cual numero salio.
+- El webhook asocia los estados por la cuenta que envio el mensaje, asi que funciona igual con el numero central.
+- La plantilla siempre lleva el nombre del parqueadero en `{{5}}`, para que el cliente sepa de quien es el mensaje.
+- El mensaje de prueba (`/mensajes/prueba`) usa la cuenta propia o, si no hay, el numero central.
 
 ## 5. Reglas de envio
 

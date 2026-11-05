@@ -13,7 +13,7 @@ import saas.parqueadero.infrastructure.configuration.whatsapp.WhatsappProperties
 class AesGcmTokenCipherTest {
 
     private static WhatsappProperties conClave(String clave) {
-        return new WhatsappProperties(null, null, null, null, null, clave, null, null);
+        return new WhatsappProperties(null, null, null, null, null, clave, null, null, null);
     }
 
     private static String claveAleatoria() {
